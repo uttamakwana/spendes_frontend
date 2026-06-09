@@ -9,13 +9,23 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.spendes.app",
       "icon": "./assets/expo.icon",
       "infoPlist": {
         "NSContactsUsageDescription": "Spendes uses your contacts so you can add friends and group members to split expenses with.",
-        "LSApplicationQueriesSchemes": ["upi", "tez", "gpay", "phonepe", "paytmmp", "bhim", "credpay"]
+        "LSApplicationQueriesSchemes": [
+          "upi",
+          "tez",
+          "gpay",
+          "phonepe",
+          "paytmmp",
+          "bhim",
+          "credpay"
+        ]
       }
     },
     "android": {
+      "package": "com.spendes.app",
       "adaptiveIcon": {
         "backgroundColor": "#4F46E5",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -23,7 +33,10 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": ["android.permission.READ_CONTACTS"]
+      "permissions": [
+        "android.permission.READ_CONTACTS",
+        "android.permission.WRITE_CONTACTS"
+      ]
     },
     "web": {
       "output": "static",
@@ -53,6 +66,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "62607133-679f-4769-90d8-dee5895e4a4f"
+      }
+    },
+    "owner": "uttamakwana"
   }
 }

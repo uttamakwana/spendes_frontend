@@ -9,7 +9,13 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build": "expo export",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "android:preview": "eas build -p android --profile preview",
+    "android:prod": "eas build -p android --profile production",
+    "ios:preview": "eas build -p ios --profile preview",
+    "ios:prod": "eas build -p ios --profile production",
+    "submit:android": "eas submit -p android --latest",
+    "submit:ios": "eas submit -p ios --latest"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
