@@ -25,6 +25,7 @@ import {
   incomeApi,
   investmentsApi,
   MemberInput,
+  notificationsApi,
   qk,
   splitsApi,
 } from '@/api';
@@ -40,6 +41,54 @@ export const useCategories = (type?: 'expense' | 'income') =>
 
 export const useOverview = () =>
   useQuery({ queryKey: qk.analyticsOverview, queryFn: analyticsApi.overview });
+
+// ── Notifications (activity inbox) ───────────────────────────────────────────
+export const useNotifications = (unreadOnly?: boolean) =>
+  useInfiniteQuery({
+    queryKey: qk.notifications({ unreadOnly: unreadOnly ?? false }),
+    queryFn: ({ pageParam = 1 }) => notificationsApi.list(pageParam, 20, unreadOnly),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.meta.hasNextPage ? last.meta.page + 1 : undefined),
+  });
+
+/** Unread badge count. Polls periodically so the bell reflects items others send you. */
+export const useUnreadCount = () =>
+  useQuery({
+    queryKey: qk.notificationsUnread,
+    queryFn: notificationsApi.unreadCount,
+    refetchInterval: 45_000,
+    refetchOnWindowFocus: true,
+  });
+
+export function useMarkNotificationRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => notificationsApi.markRead(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.notificationsAll });
+    },
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => notificationsApi.markAllRead(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.notificationsAll });
+    },
+  });
+}
+
+export function useDisputeNotification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => notificationsApi.dispute(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.notificationsAll });
+    },
+  });
+}
 
 export const useCashflow = (months = 6) =>
   useQuery({ queryKey: qk.cashflow(months), queryFn: () => analyticsApi.cashflow(months) });

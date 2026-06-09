@@ -115,6 +115,8 @@ export interface CategoryBreakdown {
 }
 export interface ExpenseSummary {
   totalAmount: number;
+  /** Actual cash paid out of pocket (personal + your payer share of splits). */
+  cashOutflow?: number;
   count: number;
   byCategory: CategoryBreakdown[];
   byPaymentMethod: { paymentMethod: string; totalAmount: number; count?: number }[];
@@ -371,6 +373,8 @@ export interface AnalyticsOverview {
   period: { from: string; to: string };
   income: number;
   expense: number;
+  /** Actual cash that left your pocket this period (personal + your payer share of splits). */
+  cashOutflow: number;
   net: number;
   savingsRate: number;
   topCategories: { category: string; totalAmount: number }[];
@@ -394,4 +398,32 @@ export interface Cashflow {
   totalIncome: number;
   totalExpense: number;
   net: number;
+}
+
+// ── Notifications ──────────────────────────────────────────────────────────
+export type NotificationType =
+  | 'friend_added'
+  | 'split_added'
+  | 'settlement_recorded'
+  | 'split_disputed'
+  | 'membership_inherited';
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  actorName?: string;
+  groupId?: string;
+  groupExpenseId?: string;
+  settlementId?: string;
+  /** When true, the linked group is a 1-on-1 friendship (link to /friends). */
+  isDirect?: boolean;
+  amount?: number;
+  currency?: string;
+  isRead: boolean;
+  isDisputed: boolean;
+  /** Whether the recipient can still flag this as wrong. */
+  canDispute: boolean;
+  createdAt: string;
 }

@@ -13,6 +13,7 @@ import {
   useGroups,
   useOverview,
   useRecentExpenses,
+  useUnreadCount,
 } from '@/features/hooks';
 import { expenseToItem, TxnRow } from '@/features/transactions/TxnRow';
 import { money } from '@/lib/money';
@@ -50,10 +51,13 @@ export default function Home() {
   const goals = useGoals();
   const groups = useGroups();
   const cashflow = useCashflow(6);
+  const unreadCount = useUnreadCount().data?.count ?? 0;
 
   const o = overview.data;
   const income = o?.income ?? 0;
   const expense = o?.expense ?? 0;
+  const cashOut = o?.cashOutflow ?? 0;
+  const fronted = Math.max(0, cashOut - expense);
   const safe = Math.max(0, income - expense);
   const spentPct = income > 0 ? Math.min(100, (expense / income) * 100) : 0;
 
@@ -96,6 +100,32 @@ export default function Home() {
             <Txt variant="title2">{user?.firstName ?? 'there'}</Txt>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View>
+              <IconButton name="notifications-outline" bg={t.surface} onPress={() => router.push('/notifications')} />
+              {unreadCount > 0 && (
+                <View
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    top: -3,
+                    right: -3,
+                    minWidth: 18,
+                    height: 18,
+                    borderRadius: 999,
+                    paddingHorizontal: 4,
+                    backgroundColor: t.danger,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 2,
+                    borderColor: t.canvas2,
+                  }}
+                >
+                  <Txt color="#fff" style={{ fontFamily: Font.bold, fontSize: 10 }}>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Txt>
+                </View>
+              )}
+            </View>
             <IconButton name="search" bg={t.surface} onPress={() => router.push('/transactions')} />
             <Pressable onPress={() => router.push('/profile')}>
               <Avatar name={user?.fullName} seed={user?.id} me size={38} />
@@ -146,6 +176,32 @@ export default function Home() {
                 Income <Txt style={{ fontFamily: Font.semibold }}>{money(income)}</Txt>
               </Txt>
             </View>
+            {fronted > 0.5 && (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  marginTop: 12,
+                  paddingTop: 12,
+                  borderTopWidth: 1,
+                  borderTopColor: t.hair,
+                }}
+              >
+                <Ionicons name="wallet-outline" size={14} color={t.ink3} />
+                <Txt tone="ink3" variant="caption" style={{ flex: 1 }}>
+                  Cash out{' '}
+                  <Txt color={t.ink} style={{ fontFamily: Font.semibold }}>
+                    {money(cashOut)}
+                  </Txt>{' '}
+                  — you fronted{' '}
+                  <Txt color={t.success} style={{ fontFamily: Font.semibold }}>
+                    {money(fronted)}
+                  </Txt>{' '}
+                  for splits
+                </Txt>
+              </View>
+            )}
           </Card>
 
           {/* owed / owe */}

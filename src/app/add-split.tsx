@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { CreateSplitBody, SplitStrategy } from '@/api';
 import { errorMessage } from '@/api';
 import {
+  useCategories,
   useCreateFriendSplit,
   useCreateGroupSplit,
   useFriend,
@@ -14,6 +15,7 @@ import {
   useGroup,
   useGroups,
 } from '@/features/hooks';
+import { categoryStyle } from '@/lib/categories';
 import { money } from '@/lib/money';
 import { hexA, useTheme } from '@/theme';
 import { Font, tabularNums } from '@/theme/fonts';
@@ -21,10 +23,12 @@ import {
   Avatar,
   Button,
   Card,
+  CategoryIcon,
   IconButton,
   MoneyText,
   Screen,
   Segmented,
+  Sheet,
   Skeleton,
   Txt,
   TopBar,
@@ -49,7 +53,8 @@ export default function AddSplit() {
       groupId={groupId}
       friendId={friendId}
       initialAmount={parseInt(params.amount ?? '0', 10) || 0}
-      initialNote={params.note || params.category || ''}
+      initialNote={params.note || ''}
+      initialCategory={params.category || undefined}
     />
   );
 }
@@ -105,18 +110,26 @@ function SplitEditor({
   friendId,
   initialAmount,
   initialNote,
+  initialCategory,
 }: {
   groupId?: string;
   friendId?: string;
   initialAmount: number;
   initialNote: string;
+  initialCategory?: string;
 }) {
   const t = useTheme();
   const router = useRouter();
   const group = useGroup(groupId ?? '');
   const friend = useFriend(friendId ?? '');
+  const categories = useCategories('expense');
   const createGroupSplit = useCreateGroupSplit(groupId ?? '');
   const createFriendSplit = useCreateFriendSplit(friendId ?? '');
+
+  const cats = categories.data ?? [];
+  const [catSheet, setCatSheet] = useState(false);
+  const [category, setCategory] = useState<string | undefined>(initialCategory || undefined);
+  const activeCat = useMemo(() => cats.find((c) => c.name === category), [cats, category]);
 
   const members: Member[] = useMemo(() => {
     if (groupId && group.data) {
@@ -215,6 +228,7 @@ function SplitEditor({
     const body: CreateSplitBody = {
       description: note || 'Split expense',
       amount: amt,
+      category: category || undefined,
       splitStrategy: strategy,
       paidBy: [{ memberId: effPayer, amount: amt }],
       splits,
@@ -228,6 +242,7 @@ function SplitEditor({
   };
 
   const saving = createGroupSplit.isPending || createFriendSplit.isPending;
+  const catColor = activeCat?.color ?? (category ? categoryStyle(category).color : t.accent);
 
   if (loading || !ready) {
     return (
@@ -272,6 +287,28 @@ function SplitEditor({
             placeholderTextColor={t.ink3}
             style={{ marginTop: 8, fontFamily: Font.regular, fontSize: 14, color: t.ink, textAlign: 'center', minWidth: 200 }}
           />
+          <Pressable
+            onPress={() => setCatSheet(true)}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 7,
+              marginTop: 14,
+              backgroundColor: hexA(catColor, 0.13),
+              paddingVertical: 6,
+              paddingLeft: 6,
+              paddingRight: 12,
+              borderRadius: 999,
+            }}
+          >
+            <View style={{ width: 24, height: 24, borderRadius: 999, backgroundColor: catColor, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name={categoryStyle(category).icon} size={14} color="#fff" />
+            </View>
+            <Txt color={catColor} style={{ fontFamily: Font.semibold, fontSize: 13.5 }}>
+              {category ?? 'Category'}
+            </Txt>
+            <Ionicons name="chevron-down" size={15} color={catColor} />
+          </Pressable>
         </Card>
 
         {/* payer */}
@@ -414,6 +451,41 @@ function SplitEditor({
           Save split
         </Button>
       </View>
+
+      {/* category sheet */}
+      <Sheet open={catSheet} onClose={() => setCatSheet(false)} title="Category">
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, paddingBottom: 8 }}>
+          {cats.map((c) => {
+            const on = category === c.name;
+            return (
+              <Pressable
+                key={c.id}
+                onPress={() => {
+                  setCategory(c.name);
+                  setCatSheet(false);
+                }}
+                style={{ width: '25%', alignItems: 'center', paddingVertical: 12 }}
+              >
+                <CategoryIcon name={c.name} icon={c.icon as keyof typeof Ionicons.glyphMap} color={c.color} size={48} />
+                <Txt
+                  center
+                  tone={on ? 'accent' : 'ink2'}
+                  variant="micro"
+                  numberOfLines={2}
+                  style={{ marginTop: 7, fontFamily: on ? Font.semibold : Font.medium }}
+                >
+                  {c.name}
+                </Txt>
+              </Pressable>
+            );
+          })}
+          {cats.length === 0 && (
+            <Txt tone="ink3" variant="caption" style={{ padding: 24 }}>
+              No categories available.
+            </Txt>
+          )}
+        </View>
+      </Sheet>
     </SafeAreaView>
   );
 }

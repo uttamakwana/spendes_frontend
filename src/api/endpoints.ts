@@ -1,6 +1,7 @@
 import { del, get, patch, post } from './http';
 import type {
   AnalyticsOverview,
+  AppNotification,
   AuthResult,
   BalancesResponse,
   Budget,
@@ -283,4 +284,14 @@ export const investmentsApi = {
 export const analyticsApi = {
   overview: () => get<AnalyticsOverview>('/analytics/overview'),
   cashflow: (months = 6) => get<Cashflow>('/analytics/cashflow', { months }),
+};
+
+// ── Notifications (activity inbox) ──────────────────────────────────────────
+export const notificationsApi = {
+  list: (page = 1, limit = 20, unreadOnly?: boolean) =>
+    get<Paginated<AppNotification>>('/notifications', { page, limit, unreadOnly }),
+  unreadCount: () => get<{ count: number }>('/notifications/unread-count'),
+  markRead: (id: string) => patch<AppNotification>(`/notifications/${id}/read`, {}),
+  markAllRead: () => post<{ updated: number }>('/notifications/read-all'),
+  dispute: (id: string) => post<AppNotification>(`/notifications/${id}/dispute`),
 };

@@ -38,4 +38,8 @@ export const qk = {
 
   analyticsOverview: ['analytics', 'overview'] as const,
   cashflow: (months: number) => ['analytics', 'cashflow', months] as const,
+
+  notifications: (filters?: object) => ['notifications', filters ?? {}] as const,
+  notificationsAll: ['notifications'] as const,
+  notificationsUnread: ['notifications', 'unread-count'] as const,
 };

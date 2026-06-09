@@ -33,6 +33,8 @@ export default function AnalyticsTab() {
   const o = overview.data;
   const income = o?.income ?? 0;
   const expense = o?.expense ?? 0;
+  const cashOut = o?.cashOutflow ?? 0;
+  const fronted = Math.max(0, cashOut - expense);
   const savingsRate = Math.round(o?.savingsRate ?? 0);
   const spentPct = income > 0 ? Math.min(100, (expense / income) * 100) : 0;
 
@@ -82,6 +84,27 @@ export default function AnalyticsTab() {
               <Txt tone="ink3" variant="caption" style={{ marginTop: 8 }}>
                 You spent <Txt style={{ fontFamily: Font.semibold }} color={t.ink}>{Math.round(spentPct)}%</Txt> of what you earned
               </Txt>
+              {fronted > 0.5 && (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginTop: 12,
+                    paddingTop: 12,
+                    borderTopWidth: 1,
+                    borderTopColor: t.hair,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="wallet-outline" size={15} color={t.ink2} />
+                    <Txt variant="caption" tone="ink2">
+                      Cash out of pocket
+                    </Txt>
+                  </View>
+                  <Txt style={{ fontFamily: Font.semibold }}>{money(cashOut)}</Txt>
+                </View>
+              )}
             </Card>
 
             {/* savings rate + spend trend */}

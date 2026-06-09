@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { errorMessage, friendsApi, splitsApi } from '@/api';
@@ -36,6 +36,7 @@ export default function Settle() {
 
   const [stage, setStage] = useState<'form' | 'done'>('form');
   const [error, setError] = useState<string | null>(null);
+  const [manual, setManual] = useState<{ vpa: string; name: string } | null>(null);
 
   const recordGroup = useRecordGroupSettlement(id);
   const recordFriend = useRecordFriendSettlement(id);
@@ -50,12 +51,20 @@ export default function Settle() {
 
   const payViaUpi = async () => {
     setError(null);
+    setManual(null);
     try {
       const res = await intent.mutateAsync();
-      const canOpen = await Linking.canOpenURL(res.uri);
-      if (canOpen) await Linking.openURL(res.uri);
-      else setError('No UPI app found. You can still mark this as paid.');
+      // Open the UPI app directly. We deliberately don't gate on Linking.canOpenURL:
+      // for an undeclared scheme it returns false on real iOS devices even when a
+      // UPI app is installed, which is exactly the "nothing opens" bug. openURL is
+      // not subject to that, and rejects only when no app can actually handle it.
+      try {
+        await Linking.openURL(res.uri);
+      } catch {
+        setManual({ vpa: res.payeeVpa, name: res.payeeName });
+      }
     } catch (e) {
+      // Intent build failed on the server (e.g. payee hasn't added a UPI id).
       setError(errorMessage(e));
     }
   };
@@ -145,6 +154,54 @@ export default function Settle() {
           <Txt tone="danger" variant="caption" center style={{ marginTop: 16 }}>
             {error}
           </Txt>
+        )}
+
+        {manual && (
+          <View
+            style={{
+              marginTop: 22,
+              alignSelf: 'stretch',
+              backgroundColor: t.surface,
+              borderWidth: 1,
+              borderColor: t.line,
+              borderRadius: 16,
+              padding: 16,
+              gap: 10,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="information-circle" size={18} color={t.accent} />
+              <Txt style={{ fontFamily: Font.semibold }}>Pay manually</Txt>
+            </View>
+            <Txt tone="ink2" variant="caption" style={{ lineHeight: 19 }}>
+              No UPI app opened automatically. Open any UPI app (GPay, PhonePe, Paytm) and send{' '}
+              <Txt color={t.ink} style={{ fontFamily: Font.semibold }}>
+                {money(amount)}
+              </Txt>{' '}
+              to this UPI ID:
+            </Txt>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                backgroundColor: t.fill,
+                borderRadius: 10,
+                paddingHorizontal: 12,
+                paddingVertical: 11,
+              }}
+            >
+              <Text selectable style={{ fontFamily: Font.semibold, fontSize: 15, color: t.ink }}>
+                {manual.vpa}
+              </Text>
+              <Txt tone="ink3" variant="micro">
+                long-press to copy
+              </Txt>
+            </View>
+            <Txt tone="ink3" variant="micro">
+              Then tap “Mark as paid” below once you’ve sent it.
+            </Txt>
+          </View>
         )}
       </View>
 
