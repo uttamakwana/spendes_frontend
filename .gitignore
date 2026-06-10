@@ -33,6 +33,10 @@ yarn-error.*
 # local env files
 .env*.local
 
+# secrets — FCM / Firebase service-account key (used at push send time, never commit).
+# Note: google-services.json is intentionally NOT ignored — it holds only public IDs.
+*-firebase-adminsdk-*.json
+
 # typescript
 *.tsbuildinfo
 

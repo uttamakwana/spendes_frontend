@@ -11,6 +11,7 @@ import {
   usersApi,
 } from '@/api';
 import { queryClient } from '@/data/queryClient';
+import { unregisterPushToken } from '@/features/push';
 
 type Status = 'loading' | 'authed' | 'guest';
 
@@ -29,6 +30,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUserState] = useState<User | null>(null);
 
   const signOut = useCallback(async () => {
+    // Detach this device's push token while the request can still authenticate.
+    await unregisterPushToken();
     try {
       await authApi.logout();
     } catch {

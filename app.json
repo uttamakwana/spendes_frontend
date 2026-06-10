@@ -26,6 +26,7 @@
     },
     "android": {
       "package": "com.spendes.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#4F46E5",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -61,7 +62,8 @@
         {
           "contactsPermission": "Spendes uses your contacts so you can add friends and group members to split expenses with."
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,

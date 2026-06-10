@@ -286,6 +286,13 @@ export const analyticsApi = {
   cashflow: (months = 6) => get<Cashflow>('/analytics/cashflow', { months }),
 };
 
+// ── Push notifications (device registration) ────────────────────────────────
+export const pushApi = {
+  register: (body: { token: string; platform: 'ios' | 'android' }) =>
+    post<{ registered: boolean }>('/push/register', body),
+  unregister: (token: string) => post<{ removed: boolean }>('/push/unregister', { token }),
+};
+
 // ── Notifications (activity inbox) ──────────────────────────────────────────
 export const notificationsApi = {
   list: (page = 1, limit = 20, unreadOnly?: boolean) =>

@@ -8,6 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/auth/AuthProvider';
 import { queryClient } from '@/data/queryClient';
+import { PushSync } from '@/features/PushSync';
 import { ThemeProvider, useTheme } from '@/theme';
 import { useAppFonts } from '@/theme/fonts';
 
@@ -18,6 +19,7 @@ function RootNavigator() {
   return (
     <>
       <StatusBar style={t.dark ? 'light' : 'dark'} />
+      <PushSync />
       <Stack
         screenOptions={{
           headerShown: false,
