@@ -1,6 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { qk } from '@/api';
 import { useAuth } from '@/auth/AuthProvider';
@@ -8,23 +8,33 @@ import { queryClient } from '@/data/queryClient';
 import { syncPushToken } from '@/features/push';
 
 /**
- * Bridges device push into the running app. Once authenticated it registers the
- * Expo push token with the backend, and it routes a notification tap to the same
- * screen the in-app inbox would (group vs friend, keyed on `isDirect`). Renders
- * nothing — mount it once under the providers. Sign-out token cleanup lives in
- * `AuthProvider` (it must run before the auth tokens are cleared).
+ * Bridges device push into the running app:
+ *  - registers the Expo push token with the backend once authenticated,
+ *  - refreshes the inbox/badge when a push arrives in the foreground,
+ *  - routes a notification tap to the same screen the in-app inbox would
+ *    (group vs friend, keyed on `isDirect`), including cold starts.
+ *
+ * Tap routing is deferred until the user is authenticated (and therefore past
+ * the auth gate), so a tap that launches the app from a killed state still
+ * lands on the right screen instead of racing session restore. Renders nothing.
  */
 export function PushSync() {
   const { status } = useAuth();
   const router = useRouter();
+
+  // The deep-link payload from a tap, held until we can safely navigate.
+  const [pending, setPending] = useState<Record<string, unknown> | null>(null);
+  // Notification ids already captured — guards against the cold-start response
+  // and the live listener both firing for the same tap.
+  const handled = useRef<Set<string>>(new Set());
 
   // Register this device whenever we become authenticated.
   useEffect(() => {
     if (status === 'authed') void syncPushToken();
   }, [status]);
 
-  // A push arriving while the app is foregrounded should refresh the inbox and
-  // bell badge immediately, rather than waiting for the next poll.
+  // A push arriving while foregrounded should refresh the inbox and bell badge
+  // immediately rather than waiting for the next poll.
   useEffect(() => {
     const received = Notifications.addNotificationReceivedListener(() => {
       queryClient.invalidateQueries({ queryKey: qk.notificationsAll });
@@ -33,28 +43,32 @@ export function PushSync() {
     return () => received.remove();
   }, []);
 
-  // Route taps on a delivered notification to its deep-link target.
+  // Capture taps from both a cold start and while the app is already running.
   useEffect(() => {
-    const route = (data: Record<string, unknown> | undefined) => {
-      const groupId = typeof data?.groupId === 'string' ? data.groupId : undefined;
-      if (groupId) {
-        router.push(data?.isDirect ? `/friends/${groupId}` : `/groups/${groupId}`);
-      } else {
-        router.push('/notifications');
-      }
+    const capture = (res: Notifications.NotificationResponse | null) => {
+      if (!res) return;
+      const id = res.notification.request.identifier;
+      if (handled.current.has(id)) return;
+      handled.current.add(id);
+      setPending(res.notification.request.content.data as Record<string, unknown>);
     };
 
-    // Cold start: the app was opened by tapping a notification.
-    Notifications.getLastNotificationResponseAsync().then((res) => {
-      if (res) route(res.notification.request.content.data as Record<string, unknown>);
-    });
-
-    // Warm: tapped while the app was running or backgrounded.
-    const sub = Notifications.addNotificationResponseReceivedListener((res) => {
-      route(res.notification.request.content.data as Record<string, unknown>);
-    });
+    Notifications.getLastNotificationResponseAsync().then(capture);
+    const sub = Notifications.addNotificationResponseReceivedListener(capture);
     return () => sub.remove();
-  }, [router]);
+  }, []);
+
+  // Flush the captured deep link once authenticated (and past the auth gate).
+  useEffect(() => {
+    if (status !== 'authed' || !pending) return;
+    const groupId = typeof pending.groupId === 'string' ? pending.groupId : undefined;
+    if (groupId) {
+      router.push(pending.isDirect ? `/friends/${groupId}` : `/groups/${groupId}`);
+    } else {
+      router.push('/notifications');
+    }
+    setPending(null);
+  }, [status, pending, router]);
 
   return null;
 }

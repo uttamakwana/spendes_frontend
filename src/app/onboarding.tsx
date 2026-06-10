@@ -10,7 +10,7 @@ import { useAuth } from '@/auth/AuthProvider';
 import { Keypad } from '@/features/auth/Keypad';
 import { hexA, useTheme } from '@/theme';
 import { Font, tabularNums } from '@/theme/fonts';
-import { Avatar, BalancePill, Button, Card, CategoryIcon, IconButton, MoneyText, Txt } from '@/ui';
+import { Avatar, BalancePill, Button, Card, CategoryIcon, IconButton, MoneyText, Txt, Wordmark } from '@/ui';
 
 type Stage = 'intro' | 'phone' | 'otp' | 'name';
 
@@ -388,27 +388,6 @@ function HeroSettle() {
         </Txt>
       </View>
     </Card>
-  );
-}
-
-function Wordmark() {
-  const t = useTheme();
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-      <View
-        style={{
-          width: 26,
-          height: 26,
-          borderRadius: 8,
-          backgroundColor: t.accent,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Ionicons name="flash" size={15} color="#fff" />
-      </View>
-      <Txt variant="title3">Spendes</Txt>
-    </View>
   );
 }
 

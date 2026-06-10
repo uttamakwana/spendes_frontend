@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="430" height="110" viewBox="0 0 430 110">
+  <defs>
+    <mask id="seam" maskUnits="userSpaceOnUse" x="0" y="0" width="110" height="110">
+      <rect width="110" height="110" fill="#fff"></rect>
+      <g transform="translate(5 5)"><rect x="27" y="46" width="46" height="8" rx="4" fill="#000" transform="rotate(-48 50 50)"></rect></g>
+    </mask>
+  </defs>
+  <g transform="translate(5 5)">
+    <path d="M70 31 C70 21 61 17 50 17 C39 17 30 22 30 32 C30 42 39 46 50 50 C61 54 70 58 70 68 C70 78 61 83 50 83 C39 83 30 78 30 68" fill="none" stroke="#4F46E5" stroke-width="17" stroke-linecap="round" stroke-linejoin="round" mask="url(#seam)"></path>
+  </g>
+  <text x="125" y="55" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="62" letter-spacing="-2.4" fill="#0A0A0A">Spendes</text>
+</svg>

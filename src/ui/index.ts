@@ -5,6 +5,7 @@ export { Bars, Donut, ProgressBar, ProgressRing, Sparkline } from './Charts';
 export type { DonutSlice } from './Charts';
 export { CategoryIcon } from './CategoryIcon';
 export { CollapsibleScreen } from './CollapsibleScreen';
+export { Logo, Wordmark } from './Logo';
 export { MoneyText } from './Money';
 export { BalancePill, StatusPill } from './Pill';
 export { Screen, SectionHeader, TopBar } from './Screen';
