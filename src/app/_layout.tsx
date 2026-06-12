@@ -11,6 +11,7 @@ import { queryClient } from '@/data/queryClient';
 import { PushSync } from '@/features/PushSync';
 import { ThemeProvider, useTheme } from '@/theme';
 import { useAppFonts } from '@/theme/fonts';
+import { OfflineBanner } from '@/ui/OfflineBanner';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -31,6 +32,7 @@ function RootNavigator() {
         <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
         <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
       </Stack>
+      <OfflineBanner />
     </>
   );
 }

@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
 
 import { API_BASE_URL, REQUEST_TIMEOUT_MS } from './config';
+import { getIsOnline, offlineError } from './network';
 import { clearTokens, getAccessToken, getRefreshToken, saveTokens } from './tokens';
 
 /** Standard backend error envelope. */
@@ -23,8 +24,10 @@ export function setAuthFailureHandler(fn: (() => void) | null) {
   onAuthFailure = fn;
 }
 
-// Attach the access token to every request.
+// Attach the access token to every request. Fail fast when the device is offline
+// so writes don't hang for the full timeout before surfacing a vague error.
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
+  if (!getIsOnline()) return Promise.reject(offlineError());
   const token = await getAccessToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
@@ -74,10 +77,18 @@ api.interceptors.response.use(
   },
 );
 
+const OFFLINE_MSG = "You're offline. Check your connection and try again.";
+const TIMEOUT_MSG = 'The connection timed out. Please try again.';
+
 /** Human-readable message from an unknown rejection. */
 export function errorMessage(err: unknown): string {
   if (err && typeof err === 'object') {
-    const e = err as Partial<ApiError> & { message?: string };
+    const e = err as Partial<ApiError> & { message?: string; code?: string; isOffline?: boolean };
+    // Our synthetic offline rejection (request blocked before it was sent)…
+    if (e.isOffline || e.errorCode === 'OFFLINE') return e.message ?? OFFLINE_MSG;
+    // …or a real axios network / timeout failure (no server response reached us).
+    if (e.code === 'ERR_NETWORK') return OFFLINE_MSG;
+    if (e.code === 'ECONNABORTED') return TIMEOUT_MSG;
     if (e.errors?.length) return e.errors[0].message;
     if (e.message) return e.message;
   }
