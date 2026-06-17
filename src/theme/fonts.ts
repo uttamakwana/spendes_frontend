@@ -1,17 +1,19 @@
 import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
+  AnekLatin_400Regular,
+  AnekLatin_500Medium,
+  AnekLatin_600SemiBold,
+  AnekLatin_700Bold,
+  AnekLatin_800ExtraBold,
   useFonts,
-} from '@expo-google-fonts/inter';
+} from '@expo-google-fonts/anek-latin';
 
-/** Font-family names — Inter as the cross-platform premium choice. */
+/** Font-family names — Anek Latin as the app's typeface. */
 export const Font = {
-  regular: 'Inter_400Regular',
-  medium: 'Inter_500Medium',
-  semibold: 'Inter_600SemiBold',
-  bold: 'Inter_700Bold',
+  regular: 'AnekLatin_400Regular',
+  medium: 'AnekLatin_500Medium',
+  semibold: 'AnekLatin_600SemiBold',
+  bold: 'AnekLatin_700Bold',
+  extrabold: 'AnekLatin_800ExtraBold',
 } as const;
 
 export type FontWeightKey = keyof typeof Font;
@@ -34,10 +36,11 @@ export type TypeVariant = keyof typeof Type;
 /** Load app fonts; returns [loaded, error]. */
 export function useAppFonts() {
   return useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    AnekLatin_400Regular,
+    AnekLatin_500Medium,
+    AnekLatin_600SemiBold,
+    AnekLatin_700Bold,
+    AnekLatin_800ExtraBold,
   });
 }
 

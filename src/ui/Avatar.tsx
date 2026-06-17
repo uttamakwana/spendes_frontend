@@ -53,7 +53,8 @@ export function Avatar({ name, seed, size = 40, me, ring, dim }: AvatarProps) {
         color={fg}
         style={{ fontFamily: Font.semibold, fontSize: size * 0.38, lineHeight: size * 0.46 }}
       >
-        {me ? 'You'.slice(0, 2).toUpperCase() : initialsOf(name)}
+        {name ? initialsOf(name) : 'You'.slice(0, 2).toUpperCase()}
+        {/* {me ? 'You'.slice(0, 2).toUpperCase() : initialsOf(name)} */}
       </Txt>
     </View>
   );

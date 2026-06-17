@@ -4,7 +4,7 @@ import React from 'react';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { hexA, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
 import { Txt } from '@/ui';
 
@@ -88,14 +88,7 @@ export function TabBar({ state, navigation, onAdd }: TabBarProps) {
             }}
             style={{ width: 60, alignItems: 'center', gap: 3 }}
           >
-            <View
-              style={{
-                paddingHorizontal: 14,
-                paddingVertical: 3,
-                borderRadius: 999,
-                backgroundColor: on ? hexA(t.accent, 0.12) : 'transparent',
-              }}
-            >
+            <View style={{ paddingVertical: 3 }}>
               <Ionicons name={on ? cfg.on : cfg.off} size={23} color={on ? t.accent : t.ink3} />
             </View>
             <Txt color={on ? t.accent : t.ink3} style={{ fontFamily: on ? Font.semibold : Font.medium, fontSize: 10.5 }}>

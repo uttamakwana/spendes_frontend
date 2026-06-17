@@ -29,9 +29,9 @@ export function Logo({ size = 28, color }: { size?: number; color?: string }) {
 }
 
 /**
- * Horizontal lockup: the mark + "Spendes" set in the app's own Inter face, so
+ * Horizontal lockup: the mark + "Spendes" set in the app's own Anek Latin face, so
  * the wordmark stays pixel-consistent with the rest of the UI (the baked-text
- * SVG lockups in `assets/` are for web/store surfaces where Inter is present).
+ * SVG lockups in `assets/` are for web/store surfaces).
  * `onDark` renders the white-on-dark variant.
  */
 export function Wordmark({
