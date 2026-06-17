@@ -38,36 +38,41 @@ export default function ProfileTab() {
           <IconButton name="create-outline" onPress={() => router.push('/profile/edit')} />
         </View>
 
-        {/* Pro upsell */}
-        <View style={{ backgroundColor: t.premium, borderRadius: 18, padding: 18, marginBottom: 16, overflow: 'hidden' }}>
-          <View
-            style={{
-              position: 'absolute',
-              top: -30,
-              right: -20,
-              width: 130,
-              height: 130,
-              borderRadius: 999,
-              backgroundColor: hexA(t.accent, 0.5),
-            }}
-          />
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-            <Ionicons name="sparkles" size={18} color="#fff" />
-            <Txt color="#fff" style={{ fontFamily: Font.bold, fontSize: 16 }}>
-              Spendes Pro
+        {/*
+          Spendes Pro upsell — temporarily hidden until the Pro plan ships (billing via
+          store in-app purchases). Re-enable this block once entitlements + subscriptions
+          are implemented; the card itself is intentionally kept here for that work.
+
+          <View style={{ backgroundColor: t.premium, borderRadius: 18, padding: 18, marginBottom: 16, overflow: 'hidden' }}>
+            <View
+              style={{
+                position: 'absolute',
+                top: -30,
+                right: -20,
+                width: 130,
+                height: 130,
+                borderRadius: 999,
+                backgroundColor: hexA(t.accent, 0.5),
+              }}
+            />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+              <Ionicons name="sparkles" size={18} color="#fff" />
+              <Txt color="#fff" style={{ fontFamily: Font.bold, fontSize: 16 }}>
+                Spendes Pro
+              </Txt>
+            </View>
+            <Txt color="rgba(255,255,255,0.72)" style={{ marginTop: 8, lineHeight: 20, maxWidth: 250 }}>
+              Unlimited budgets, smart insights, receipt scanning and investment tracking.
             </Txt>
+            <Pressable
+              style={{ marginTop: 14, alignSelf: 'flex-start', backgroundColor: '#fff', paddingHorizontal: 18, paddingVertical: 9, borderRadius: 10 }}
+            >
+              <Txt color={t.premium} style={{ fontFamily: Font.bold, fontSize: 14 }}>
+                Try free for 14 days
+              </Txt>
+            </Pressable>
           </View>
-          <Txt color="rgba(255,255,255,0.72)" style={{ marginTop: 8, lineHeight: 20, maxWidth: 250 }}>
-            Unlimited budgets, smart insights, receipt scanning &amp; investment tracking.
-          </Txt>
-          <Pressable
-            style={{ marginTop: 14, alignSelf: 'flex-start', backgroundColor: '#fff', paddingHorizontal: 18, paddingVertical: 9, borderRadius: 10 }}
-          >
-            <Txt color={t.premium} style={{ fontFamily: Font.bold, fontSize: 14 }}>
-              Try free for 14 days
-            </Txt>
-          </Pressable>
-        </View>
+        */}
 
         {/* plan modules */}
         <Group>

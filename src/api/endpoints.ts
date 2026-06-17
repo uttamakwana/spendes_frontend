@@ -21,6 +21,7 @@ import type {
   Income,
   IncomeSummary,
   Investment,
+  NotificationPreferences,
   OtpRequestResult,
   Paginated,
   PaidByInput,
@@ -58,6 +59,11 @@ export const usersApi = {
   me: () => get<User>('/users/me'),
   updateMe: (body: Partial<Pick<User, 'firstName' | 'lastName' | 'email' | 'avatarUrl' | 'defaultCurrency' | 'upiId'>>) =>
     patch<User>('/users/me', body),
+  /** Updates per-category push opt-outs (partial — send only changed keys). */
+  updateNotificationPreferences: (body: Partial<NotificationPreferences>) =>
+    patch<User>('/users/me/notification-preferences', body),
+  /** Permanently deletes the authenticated user's account and all their data. */
+  deleteAccount: () => del<{ deleted: boolean }>('/users/me'),
 };
 
 // ── Categories ─────────────────────────────────────────────────────────────

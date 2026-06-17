@@ -1,13 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useMutation } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { Switch, View } from 'react-native';
 
+import { NotificationPreferences, usersApi } from '@/api';
+import { useAuth } from '@/auth/AuthProvider';
 import { hexA, useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
 import { CollapsibleScreen, Txt } from '@/ui';
 
+type PrefKey = keyof NotificationPreferences;
+
 interface Pref {
-  key: string;
+  key: PrefKey;
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
   label: string;
@@ -21,9 +26,34 @@ const PREFS: Pref[] = [
   { key: 'summary', icon: 'newspaper-outline', color: '#16A34A', label: 'Weekly summary', desc: 'A digest of your spending each week' },
 ];
 
+const DEFAULTS: NotificationPreferences = { reminders: true, splits: true, budgets: true, summary: false };
+
 export default function NotificationsSettings() {
   const t = useTheme();
-  const [on, setOn] = useState<Record<string, boolean>>({ reminders: true, splits: true, budgets: true, summary: false });
+  const { user, setUser } = useAuth();
+
+  // Seed from the saved preferences; fall back to defaults for older accounts.
+  const [prefs, setPrefs] = useState<NotificationPreferences>(() => ({
+    ...DEFAULTS,
+    ...(user?.notificationPreferences ?? {}),
+  }));
+
+  const update = useMutation({
+    mutationFn: (patch: Partial<NotificationPreferences>) => usersApi.updateNotificationPreferences(patch),
+    onSuccess: (u) => {
+      setUser(u);
+      setPrefs({ ...DEFAULTS, ...u.notificationPreferences });
+    },
+    onError: () => {
+      // Revert optimistic change back to the last known-good server value.
+      setPrefs({ ...DEFAULTS, ...(user?.notificationPreferences ?? {}) });
+    },
+  });
+
+  const toggle = (key: PrefKey, value: boolean) => {
+    setPrefs((p) => ({ ...p, [key]: value })); // optimistic
+    update.mutate({ [key]: value });
+  };
 
   return (
     <CollapsibleScreen title="Notifications" contentContainerStyle={{ padding: 16 }}>
@@ -51,8 +81,8 @@ export default function NotificationsSettings() {
                 </Txt>
               </View>
               <Switch
-                value={!!on[p.key]}
-                onValueChange={(v) => setOn((s) => ({ ...s, [p.key]: v }))}
+                value={prefs[p.key]}
+                onValueChange={(v) => toggle(p.key, v)}
                 trackColor={{ true: t.accent, false: t.fill2 }}
                 thumbColor="#fff"
               />
@@ -60,8 +90,8 @@ export default function NotificationsSettings() {
           ))}
         </View>
         <Txt tone="ink3" variant="caption" style={{ marginTop: 14, paddingHorizontal: 4, lineHeight: 18 }}>
-          Push notifications require enabling them for Spendes in your device settings. These
-          preferences control what we’d send once that’s on.
+          Saved to your account and synced across devices. You’ll also need notifications enabled
+          for Spendes in your device settings to receive pushes.
         </Txt>
     </CollapsibleScreen>
   );

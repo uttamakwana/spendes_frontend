@@ -54,7 +54,7 @@ export function useContacts() {
   return { contacts, status, load };
 }
 
-const INVITE_LINK = 'https://spendes.app';
+const INVITE_LINK = 'https://spendes.netlify.app';
 
 /** Open the SMS composer addressed to a contact with a prefilled invite. */
 export async function inviteByText(name: string, phone: string) {

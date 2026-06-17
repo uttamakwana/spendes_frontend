@@ -44,6 +44,13 @@ export interface Tokens {
   tokenType: string;
   expiresIn: number;
 }
+/** Per-category push opt-outs. Gates device push only; the in-app inbox always records activity. */
+export interface NotificationPreferences {
+  reminders: boolean;
+  splits: boolean;
+  budgets: boolean;
+  summary: boolean;
+}
 export interface User {
   id: string;
   dialCode: string;
@@ -57,6 +64,7 @@ export interface User {
   roles: string[];
   plan: PlanType;
   upiId?: string;
+  notificationPreferences: NotificationPreferences;
   defaultCurrency: string;
   isPhoneVerified: boolean;
   isEmailVerified: boolean;

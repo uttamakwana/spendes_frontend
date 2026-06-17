@@ -8,6 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/auth/AuthProvider';
 import { queryClient } from '@/data/queryClient';
+import { AppLockProvider } from '@/features/appLock/AppLockProvider';
 import { PushSync } from '@/features/PushSync';
 import { ThemeProvider, useTheme } from '@/theme';
 import { useAppFonts } from '@/theme/fonts';
@@ -54,7 +55,9 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
             <AuthProvider>
-              <RootNavigator />
+              <AppLockProvider>
+                <RootNavigator />
+              </AppLockProvider>
             </AuthProvider>
           </ThemeProvider>
         </QueryClientProvider>

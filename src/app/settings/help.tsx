@@ -17,10 +17,10 @@ interface Item {
 
 const ITEMS: Item[] = [
   { icon: 'mail-outline', color: '#4F46E5', label: 'Contact support', desc: 'support@spendes.app', url: 'mailto:support@spendes.app?subject=Spendes%20support' },
-  { icon: 'help-buoy-outline', color: '#2563EB', label: 'Help center', desc: 'Guides and FAQs', url: 'https://spendes.app/help' },
-  { icon: 'star-outline', color: '#D97706', label: 'Rate Spendes', desc: 'Leave a review', url: 'https://spendes.app' },
-  { icon: 'document-text-outline', color: '#52525B', label: 'Terms of service', desc: '', url: 'https://spendes.app/terms' },
-  { icon: 'lock-closed-outline', color: '#16A34A', label: 'Privacy policy', desc: '', url: 'https://spendes.app/privacy' },
+  { icon: 'help-buoy-outline', color: '#2563EB', label: 'Help center', desc: 'Guides and FAQs', url: 'https://spendes.netlify.app/#faq' },
+  { icon: 'star-outline', color: '#D97706', label: 'Rate Spendes', desc: 'Leave a review', url: 'https://spendes.netlify.app' },
+  { icon: 'document-text-outline', color: '#52525B', label: 'Terms of service', desc: '', url: 'https://spendes.netlify.app/terms' },
+  { icon: 'lock-closed-outline', color: '#16A34A', label: 'Privacy policy', desc: '', url: 'https://spendes.netlify.app/privacy' },
 ];
 
 export default function HelpSupport() {

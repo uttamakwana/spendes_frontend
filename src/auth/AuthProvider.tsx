@@ -20,6 +20,7 @@ interface AuthContextValue {
   user: User | null;
   signIn: (result: AuthResult) => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   setUser: (u: User) => void;
 }
 
@@ -47,6 +48,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await saveTokens(result.tokens);
     setUserState(result.user);
     setStatus('authed');
+  }, []);
+
+  // Permanently delete the account, then tear down the local session. The server
+  // cascades the account and its push tokens, so (unlike sign-out) there's nothing
+  // left to log out of or unregister — and the request must succeed before we
+  // clear anything, so a failure surfaces to the caller with the session intact.
+  const deleteAccount = useCallback(async () => {
+    await usersApi.deleteAccount();
+    await clearTokens();
+    queryClient.clear();
+    setUserState(null);
+    setStatus('guest');
   }, []);
 
   const setUser = useCallback((u: User) => setUserState(u), []);
@@ -89,8 +102,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, user, signIn, signOut, setUser }),
-    [status, user, signIn, signOut, setUser],
+    () => ({ status, user, signIn, signOut, deleteAccount, setUser }),
+    [status, user, signIn, signOut, deleteAccount, setUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
