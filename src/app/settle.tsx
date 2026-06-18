@@ -2,8 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { AppState, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { errorMessage, friendsApi, splitsApi } from '@/api';
@@ -34,9 +34,14 @@ export default function Settle() {
   const name = params.name ?? 'them';
   const incoming = params.incoming === '1';
 
-  const [stage, setStage] = useState<'form' | 'done'>('form');
+  const [stage, setStage] = useState<'form' | 'confirm' | 'done'>('form');
   const [error, setError] = useState<string | null>(null);
   const [manual, setManual] = useState<{ vpa: string; name: string } | null>(null);
+  // The UPI intent's transaction reference — passed back when recording so the
+  // payment is correlated and can't be double-recorded.
+  const [reference, setReference] = useState<string | undefined>();
+  // Set once we hand off to a UPI app; when the user returns we ask them to confirm.
+  const awaitingReturn = useRef(false);
 
   const recordGroup = useRecordGroupSettlement(id);
   const recordFriend = useRecordFriendSettlement(id);
@@ -49,17 +54,32 @@ export default function Settle() {
         : splitsApi.settlementIntent(id, { toMemberId, amount }),
   });
 
+  // We can't get a payment confirmation from a UPI app (no callback for a
+  // non-merchant; iOS returns nothing). So when the user comes back to Spendes
+  // after we opened their UPI app, ask whether it went through and record on yes.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active' && awaitingReturn.current) {
+        awaitingReturn.current = false;
+        setStage('confirm');
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
   const payViaUpi = async () => {
     setError(null);
     setManual(null);
     try {
       const res = await intent.mutateAsync();
+      setReference(res.reference);
       // Open the UPI app directly. We deliberately don't gate on Linking.canOpenURL:
       // for an undeclared scheme it returns false on real iOS devices even when a
       // UPI app is installed, which is exactly the "nothing opens" bug. openURL is
       // not subject to that, and rejects only when no app can actually handle it.
       try {
         await Linking.openURL(res.uri);
+        awaitingReturn.current = true;
       } catch {
         setManual({ vpa: res.payeeVpa, name: res.payeeName });
       }
@@ -71,8 +91,9 @@ export default function Settle() {
 
   const markPaid = () => {
     setError(null);
+    awaitingReturn.current = false;
     record.mutate(
-      { toMemberId, fromMemberId, amount, method: 'upi' },
+      { toMemberId, fromMemberId, amount, method: 'upi', reference },
       { onSuccess: () => setStage('done'), onError: (e) => setError(errorMessage(e)) },
     );
   };
@@ -97,6 +118,52 @@ export default function Settle() {
         <View style={{ width: '100%', marginTop: 32 }}>
           <Button size="lg" onPress={() => router.replace('/(tabs)/home')}>
             Done
+          </Button>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (stage === 'confirm') {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.canvas }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 4 }}>
+          <IconButton name="close" onPress={() => router.back()} />
+          <Txt variant="headline">Confirm payment</Txt>
+          <View style={{ width: 38 }} />
+        </View>
+
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 }}>
+          <View style={{ width: 84, height: 84, borderRadius: 999, backgroundColor: t.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="card-outline" size={40} color={t.accent} />
+          </View>
+          <Txt variant="title2" center style={{ marginTop: 22 }}>
+            Did your payment go through?
+          </Txt>
+          <Txt tone="ink2" center style={{ marginTop: 8, lineHeight: 21 }}>
+            Confirm you paid{' '}
+            <Txt color={t.ink} style={{ fontFamily: Font.semibold }}>
+              {money(amount)}
+            </Txt>{' '}
+            to{' '}
+            <Txt color={t.ink} style={{ fontFamily: Font.semibold }}>
+              {name.split(' ')[0]}
+            </Txt>{' '}
+            and we’ll record the settlement and update your balance.
+          </Txt>
+          {error && (
+            <Txt tone="danger" variant="caption" center style={{ marginTop: 16 }}>
+              {error}
+            </Txt>
+          )}
+        </View>
+
+        <View style={{ paddingHorizontal: 24, paddingBottom: 24, gap: 10 }}>
+          <Button size="lg" icon="checkmark" loading={record.isPending} onPress={markPaid}>
+            Yes, I’ve paid
+          </Button>
+          <Button size="lg" variant="ghost" onPress={() => { setError(null); setStage('form'); }}>
+            Not yet
           </Button>
         </View>
       </SafeAreaView>

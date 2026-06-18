@@ -177,7 +177,7 @@ export const splitsApi = {
     post<SettlementIntent>(`/groups/${groupId}/settlements/intent`, body),
   recordSettlement: (
     groupId: string,
-    body: { fromMemberId?: string; toMemberId: string; amount: number; method?: PaymentMethod; note?: string },
+    body: { fromMemberId?: string; toMemberId: string; amount: number; method?: PaymentMethod; note?: string; reference?: string },
   ) => post<Settlement>(`/groups/${groupId}/settlements`, body),
   listSettlements: (groupId: string, page = 1, limit = 20) =>
     get<Paginated<Settlement>>(`/groups/${groupId}/settlements`, { page, limit }),
@@ -196,7 +196,7 @@ export const friendsApi = {
     post<SettlementIntent>(`/friends/${friendshipId}/settlements/intent`, body),
   recordSettlement: (
     friendshipId: string,
-    body: { fromMemberId?: string; toMemberId: string; amount: number; method?: PaymentMethod; note?: string },
+    body: { fromMemberId?: string; toMemberId: string; amount: number; method?: PaymentMethod; note?: string; reference?: string },
   ) => post<Settlement>(`/friends/${friendshipId}/settlements`, body),
 };
 

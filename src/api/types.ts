@@ -247,6 +247,8 @@ export interface SettlementIntent {
   amount: number;
   currency: string;
   note?: string;
+  /** Transaction reference to pass back when recording the settlement (idempotency). */
+  reference: string;
 }
 
 // ── Friends ────────────────────────────────────────────────────────────────

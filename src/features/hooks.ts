@@ -297,17 +297,24 @@ export function useCreateFriendSplit(friendshipId: string) {
     onSuccess: () => invalidateAfterFriendMutation(friendshipId),
   });
 }
+type RecordSettlementBody = {
+  fromMemberId?: string;
+  toMemberId: string;
+  amount: number;
+  method?: 'upi' | 'cash';
+  note?: string;
+  /** UPI transaction reference from the intent — makes recording idempotent. */
+  reference?: string;
+};
 export function useRecordGroupSettlement(groupId: string) {
   return useMutation({
-    mutationFn: (b: { fromMemberId?: string; toMemberId: string; amount: number; method?: 'upi' | 'cash' }) =>
-      splitsApi.recordSettlement(groupId, b),
+    mutationFn: (b: RecordSettlementBody) => splitsApi.recordSettlement(groupId, b),
     onSuccess: () => invalidateAfterGroupMutation(groupId),
   });
 }
 export function useRecordFriendSettlement(friendshipId: string) {
   return useMutation({
-    mutationFn: (b: { fromMemberId?: string; toMemberId: string; amount: number; method?: 'upi' | 'cash' }) =>
-      friendsApi.recordSettlement(friendshipId, b),
+    mutationFn: (b: RecordSettlementBody) => friendsApi.recordSettlement(friendshipId, b),
     onSuccess: () => invalidateAfterFriendMutation(friendshipId),
   });
 }
