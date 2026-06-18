@@ -4,7 +4,7 @@ import { ScrollView, View } from 'react-native';
 
 import type { PaymentMethod } from '@/api';
 import { errorMessage } from '@/api';
-import { AmountField, CategoryField, ChipSelect, LabeledInput } from '@/features/forms/Fields';
+import { AmountField, CategoryField, ChipSelect, DateField, LabeledInput } from '@/features/forms/Fields';
 import { useExpense, useIncome, useUpdateExpense, useUpdateIncome } from '@/features/hooks';
 import { Button, Screen, Skeleton, Txt, TopBar } from '@/ui';
 
@@ -33,6 +33,7 @@ export default function EditTransaction() {
   const [category, setCategory] = useState<string | null>(null);
   const [method, setMethod] = useState<PaymentMethod>('upi');
   const [note, setNote] = useState('');
+  const [date, setDate] = useState(new Date());
   const [error, setError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
@@ -42,6 +43,8 @@ export default function EditTransaction() {
       setCategory(record.category);
       setNote(record.notes ?? record.description ?? '');
       setMethod((isIncome ? (record as { receivedVia: PaymentMethod }).receivedVia : (record as { paymentMethod: PaymentMethod }).paymentMethod) ?? 'upi');
+      const when = isIncome ? (record as { receivedAt?: string }).receivedAt : (record as { spentAt?: string }).spentAt;
+      if (when) setDate(new Date(when));
       setHydrated(true);
     }
   }, [record, hydrated, isIncome]);
@@ -55,9 +58,9 @@ export default function EditTransaction() {
     setError(null);
     const opts = { onSuccess: () => router.back(), onError: (e: unknown) => setError(errorMessage(e)) };
     if (isIncome) {
-      updateIncome.mutate({ amount: amt, category: category!, receivedVia: method, notes: note || undefined, source: note || undefined }, opts);
+      updateIncome.mutate({ amount: amt, category: category!, receivedVia: method, notes: note || undefined, source: note || undefined, receivedAt: date.toISOString() }, opts);
     } else {
-      updateExpense.mutate({ amount: amt, category: category!, paymentMethod: method, notes: note || undefined, description: note || undefined }, opts);
+      updateExpense.mutate({ amount: amt, category: category!, paymentMethod: method, notes: note || undefined, description: note || undefined, spentAt: date.toISOString() }, opts);
     }
   };
 
@@ -75,6 +78,7 @@ export default function EditTransaction() {
           <AmountField value={amount} onChange={setAmount} />
           <CategoryField type={isIncome ? 'income' : 'expense'} value={category} onChange={setCategory} />
           <ChipSelect label={isIncome ? 'Received via' : 'Payment method'} value={method} onChange={setMethod} options={METHODS} />
+          <DateField label={isIncome ? 'Date received' : 'Date spent'} value={date} onChange={setDate} />
           <LabeledInput label={isIncome ? 'Source / note' : 'Note'} value={note} onChangeText={setNote} placeholder="Add a note…" autoCapitalize="sentences" />
 
           {error && (

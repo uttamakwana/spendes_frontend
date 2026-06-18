@@ -1,13 +1,15 @@
+import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
+import { format, isToday } from 'date-fns';
 import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import type { Category } from '@/api';
 import { useCategories } from '@/features/hooks';
 import { categoryStyle } from '@/lib/categories';
 import { hexA, useTheme } from '@/theme';
 import { Font, tabularNums } from '@/theme/fonts';
-import { CategoryIcon, Sheet, Txt } from '@/ui';
+import { Button, CategoryIcon, Sheet, Txt } from '@/ui';
 
 /** Labeled single-line text/number input. */
 export function LabeledInput({
@@ -140,6 +142,122 @@ export function ChipSelect<T extends string>({
           );
         })}
       </ScrollView>
+    </View>
+  );
+}
+
+/**
+ * Cross-platform date + time picker, shared by the add/edit screens. Android has no
+ * single "datetime" picker, so it chains a date dialog into a time dialog (via the
+ * imperative DateTimePickerAndroid API) and merges them; iOS shows one datetime
+ * spinner in a sheet. Picks are capped at the present. Returns `open()` to launch it
+ * and `element` to render.
+ */
+export function useWhenPicker(value: Date, onChange: (d: Date) => void) {
+  const t = useTheme();
+  const [iosOpen, setIosOpen] = useState(false);
+
+  // Never let the chosen instant land in the future.
+  const commit = (d: Date) => {
+    const now = new Date();
+    onChange(d.getTime() > now.getTime() ? now : d);
+  };
+
+  const open = () => {
+    if (Platform.OS !== 'android') {
+      setIosOpen(true);
+      return;
+    }
+    // Android: pick the date, then the time, then combine the two.
+    DateTimePickerAndroid.open({
+      value,
+      mode: 'date',
+      maximumDate: new Date(),
+      onChange: (dateEvent, pickedDate) => {
+        if (dateEvent.type !== 'set' || !pickedDate) return;
+        DateTimePickerAndroid.open({
+          value: pickedDate,
+          mode: 'time',
+          onChange: (timeEvent, pickedTime) => {
+            const merged = new Date(pickedDate);
+            if (timeEvent.type === 'set' && pickedTime) {
+              merged.setHours(pickedTime.getHours(), pickedTime.getMinutes(), 0, 0);
+            }
+            commit(merged);
+          },
+        });
+      },
+    });
+  };
+
+  const element = (
+    <Sheet open={iosOpen} onClose={() => setIosOpen(false)} title="When">
+      <View style={{ alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16 }}>
+        <DateTimePicker
+          value={value}
+          mode="datetime"
+          display="inline"
+          maximumDate={new Date()}
+          themeVariant={t.dark ? 'dark' : 'light'}
+          onChange={(_, selected) => selected && commit(selected)}
+        />
+        <View style={{ alignSelf: 'stretch', marginTop: 8 }}>
+          <Button size="lg" onPress={() => setIosOpen(false)}>
+            Done
+          </Button>
+        </View>
+      </View>
+    </Sheet>
+  );
+
+  return { open, element };
+}
+
+/** "Today, 3:30 PM" / "12 Jun 2025, 3:30 PM" — a record's date + time for display. */
+export function formatWhen(value: Date): string {
+  const day = isToday(value) ? 'Today' : format(value, 'd MMM yyyy');
+  return `${day}, ${format(value, 'h:mm a')}`;
+}
+
+/** Labeled date + time field — tap to set exactly when a record happened. Capped at now. */
+export function DateField({
+  value,
+  onChange,
+  label = 'Date',
+}: {
+  value: Date;
+  onChange: (d: Date) => void;
+  label?: string;
+}) {
+  const t = useTheme();
+  const { open, element } = useWhenPicker(value, onChange);
+
+  return (
+    <View>
+      <Txt variant="caption" tone="ink2" style={{ fontFamily: Font.semibold, marginBottom: 6, paddingHorizontal: 2 }}>
+        {label}
+      </Txt>
+      <Pressable
+        onPress={open}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 12,
+          backgroundColor: t.surface,
+          borderWidth: 1,
+          borderColor: t.line,
+          borderRadius: 12,
+          paddingHorizontal: 12,
+          height: 50,
+        }}
+      >
+        <View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: t.fill, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="calendar-outline" size={17} color={t.ink2} />
+        </View>
+        <Txt style={{ flex: 1 }}>{formatWhen(value)}</Txt>
+        <Ionicons name="chevron-down" size={18} color={t.ink3} />
+      </Pressable>
+      {element}
     </View>
   );
 }

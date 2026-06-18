@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Category, PaymentMethod } from '@/api';
 import { errorMessage } from '@/api';
+import { formatWhen, useWhenPicker } from '@/features/forms/Fields';
 import { useCategories, useCreateExpense, useCreateIncome } from '@/features/hooks';
 import { Keypad } from '@/features/auth/Keypad';
 import { categoryStyle } from '@/lib/categories';
@@ -35,10 +36,14 @@ export default function AddTransaction() {
   const [catSheet, setCatSheet] = useState(false);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // When the money actually moved — defaults to now, but can be set to the exact past
+  // date + time so it lands in the right slot for lists, summaries and analytics.
+  const [date, setDate] = useState(new Date());
 
   const categories = useCategories(kind);
   const createExpense = useCreateExpense();
   const createIncome = useCreateIncome();
+  const when = useWhenPicker(date, setDate);
 
   const cats = categories.data ?? [];
   const activeCat: Category | undefined = useMemo(
@@ -49,6 +54,7 @@ export default function AddTransaction() {
   const num = parseInt(amount, 10) || 0;
   const accent = kind === 'income' ? t.success : activeCat ? activeCat.color : t.accent;
   const catName = activeCat?.name ?? (kind === 'income' ? 'Income' : 'Category');
+  const dateLabel = formatWhen(date);
 
   const pushDigit = (d: string) =>
     setAmount((a) => {
@@ -65,12 +71,12 @@ export default function AddTransaction() {
     }
     if (kind === 'expense') {
       createExpense.mutate(
-        { amount: num, category: activeCat.name, paymentMethod: method, notes: note || undefined, description: note || undefined },
+        { amount: num, category: activeCat.name, paymentMethod: method, notes: note || undefined, description: note || undefined, spentAt: date.toISOString() },
         { onSuccess: () => router.back(), onError: (e) => setError(errorMessage(e)) },
       );
     } else {
       createIncome.mutate(
-        { amount: num, category: activeCat.name, receivedVia: method, notes: note || undefined, source: note || undefined },
+        { amount: num, category: activeCat.name, receivedVia: method, notes: note || undefined, source: note || undefined, receivedAt: date.toISOString() },
         { onSuccess: () => router.back(), onError: (e) => setError(errorMessage(e)) },
       );
     }
@@ -149,6 +155,18 @@ export default function AddTransaction() {
           placeholderTextColor={t.ink3}
           style={{ marginTop: 18, textAlign: 'center', fontFamily: Font.regular, fontSize: 15, color: t.ink, minWidth: 200 }}
         />
+
+        {/* spend date + time — tap to set exactly when it happened */}
+        <Pressable
+          onPress={when.open}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16, paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999, backgroundColor: t.fill }}
+        >
+          <Ionicons name="calendar-outline" size={15} color={t.ink2} />
+          <Txt color={t.ink2} variant="caption" style={{ fontFamily: Font.medium }}>
+            {dateLabel}
+          </Txt>
+          <Ionicons name="chevron-down" size={14} color={t.ink3} />
+        </Pressable>
 
         {error && (
           <Txt tone="danger" variant="caption" style={{ marginTop: 12 }}>
@@ -240,6 +258,9 @@ export default function AddTransaction() {
           </Button>
         </View>
       </View>
+
+      {/* shared date + time picker */}
+      {when.element}
 
       {/* category sheet */}
       <Sheet open={catSheet} onClose={() => setCatSheet(false)} title="Category">
