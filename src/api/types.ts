@@ -258,6 +258,7 @@ export interface Friend {
   friendMemberId: string;
   displayName: string;
   userId?: string;
+  avatarUrl?: string;
   isRegistered: boolean;
   dialCode?: string;
   phoneNumber?: string;

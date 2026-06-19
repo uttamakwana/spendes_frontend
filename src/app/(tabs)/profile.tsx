@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/auth/AuthProvider';
@@ -15,6 +15,13 @@ export default function ProfileTab() {
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
   const { appearance, setAppearance, accent, setAccent } = useThemeControls();
+
+  const confirmLogout = () => {
+    Alert.alert('Log out?', 'You can sign back in anytime with your phone number.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Log out', style: 'destructive', onPress: () => void signOut() },
+    ]);
+  };
 
   return (
     <CollapsibleScreen
@@ -161,7 +168,7 @@ export default function ProfileTab() {
         </Group>
 
         <Group>
-          <Row icon="log-out-outline" color="#DC2626" label="Log out" danger onPress={signOut} last />
+          <Row icon="log-out-outline" color="#DC2626" label="Log out" danger onPress={confirmLogout} last />
         </Group>
 
         <Txt center tone="ink3" variant="caption" style={{ marginTop: 4 }}>

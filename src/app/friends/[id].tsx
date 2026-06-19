@@ -36,7 +36,7 @@ export default function FriendDetail() {
         ) : (
           <>
             <View style={{ alignItems: 'center' }}>
-              <Avatar name={f.displayName} seed={f.friendMemberId} size={76} />
+              <Avatar name={f.displayName} seed={f.friendMemberId} uri={f.avatarUrl} size={76} />
               <Txt variant="title2" style={{ marginTop: 12 }}>
                 {f.displayName}
               </Txt>

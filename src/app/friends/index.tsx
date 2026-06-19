@@ -66,7 +66,7 @@ export default function Friends() {
                   opacity: pressed ? 0.6 : 1,
                 })}
               >
-                <Avatar name={f.displayName} seed={f.friendMemberId} size={44} />
+                <Avatar name={f.displayName} seed={f.friendMemberId} uri={f.avatarUrl} size={44} />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Txt variant="headline" numberOfLines={1}>
                     {f.displayName}

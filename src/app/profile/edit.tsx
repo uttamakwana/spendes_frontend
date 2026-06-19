@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -21,6 +22,9 @@ export default function ProfileEdit() {
   const [email, setEmail] = useState(user?.email ?? '');
   const [upiId, setUpiId] = useState(user?.upiId ?? '');
   const [error, setError] = useState<string | null>(null);
+  // Brief success confirmation — needed because a local upload finishes almost
+  // instantly, so a spinner alone gives no perceptible feedback.
+  const [showUpdated, setShowUpdated] = useState(false);
 
   const save = useMutation({
     mutationFn: () =>
@@ -39,14 +43,24 @@ export default function ProfileEdit() {
 
   const upload = useMutation({
     mutationFn: (file: { uri: string; name: string; type: string }) => usersApi.uploadAvatar(file),
-    onSuccess: (u) => setUser(u),
+    onSuccess: (u) => {
+      setUser(u);
+      setError(null);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      setShowUpdated(true);
+      setTimeout(() => setShowUpdated(false), 2500);
+    },
     onError: (e) => setError(errorMessage(e)),
   });
   const removeAvatar = useMutation({
     mutationFn: () => usersApi.removeAvatar(),
-    onSuccess: (u) => setUser(u),
+    onSuccess: (u) => {
+      setUser(u);
+      setShowUpdated(false);
+    },
     onError: (e) => setError(errorMessage(e)),
   });
+  const busy = upload.isPending || removeAvatar.isPending;
 
   const pickAndUpload = async () => {
     setError(null);
@@ -74,8 +88,26 @@ export default function ProfileEdit() {
     <CollapsibleScreen title="Edit profile" contentContainerStyle={{ padding: 16, gap: 14 }}>
         {/* profile photo */}
         <View style={{ alignItems: 'center', gap: 8, paddingTop: 4, paddingBottom: 6 }}>
-          <Pressable onPress={pickAndUpload} disabled={upload.isPending}>
+          <Pressable onPress={pickAndUpload} disabled={busy} style={{ width: 96, height: 96 }}>
             <Avatar name={user?.fullName} seed={user?.id} uri={user?.avatarUrl} me size={96} />
+            {/* dim + spinner while working — visible even for instant local uploads */}
+            {busy && (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: 96,
+                  height: 96,
+                  borderRadius: 999,
+                  backgroundColor: 'rgba(0,0,0,0.4)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <ActivityIndicator color="#fff" />
+              </View>
+            )}
             <View
               style={{
                 position: 'absolute',
@@ -91,21 +123,25 @@ export default function ProfileEdit() {
                 borderColor: t.canvas2,
               }}
             >
-              {upload.isPending ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Ionicons name="camera" size={16} color="#fff" />
-              )}
+              <Ionicons name="camera" size={16} color="#fff" />
             </View>
           </Pressable>
-          {user?.avatarUrl ? (
-            <Pressable
-              onPress={() => { setError(null); removeAvatar.mutate(); }}
-              disabled={removeAvatar.isPending}
-              hitSlop={8}
-            >
+
+          {busy ? (
+            <Txt tone="ink2" variant="caption" style={{ fontFamily: Font.semibold }}>
+              {upload.isPending ? 'Uploading photo…' : 'Removing…'}
+            </Txt>
+          ) : showUpdated ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="checkmark-circle" size={15} color={t.success} />
+              <Txt color={t.success} variant="caption" style={{ fontFamily: Font.semibold }}>
+                Photo updated
+              </Txt>
+            </View>
+          ) : user?.avatarUrl ? (
+            <Pressable onPress={() => { setError(null); removeAvatar.mutate(); }} hitSlop={8}>
               <Txt tone="danger" variant="caption" style={{ fontFamily: Font.semibold }}>
-                {removeAvatar.isPending ? 'Removing…' : 'Remove photo'}
+                Remove photo
               </Txt>
             </Pressable>
           ) : (

@@ -128,7 +128,7 @@ export default function Home() {
             </View>
             <IconButton name="search" bg={t.surface} onPress={() => router.push('/transactions')} />
             <Pressable onPress={() => router.push('/profile')}>
-              <Avatar name={user?.fullName} seed={user?.id} me size={38} />
+              <Avatar name={user?.fullName} seed={user?.id} uri={user?.avatarUrl} me size={38} />
             </Pressable>
           </View>
         </View>
