@@ -76,6 +76,12 @@
           "faceIDPermission": "Spendes uses Face ID to lock the app so only you can open it."
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Spendes uses your photos so you can set a profile picture."
+        }
+      ],
       "@react-native-community/datetimepicker"
     ],
     "experiments": {

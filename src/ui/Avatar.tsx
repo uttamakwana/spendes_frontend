@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { Image, View } from 'react-native';
 
 import { CAT_VIZ, useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
@@ -31,12 +31,18 @@ export interface AvatarProps {
   me?: boolean;
   ring?: boolean;
   dim?: boolean;
+  /** Profile photo URL; when set, the image is shown instead of initials. */
+  uri?: string | null;
 }
 
-export function Avatar({ name, seed, size = 40, me, ring, dim }: AvatarProps) {
+export function Avatar({ name, seed, size = 40, me, ring, dim, uri }: AvatarProps) {
   const t = useTheme();
   const bg = dim ? t.fill2 : me ? t.accent : colorOf(seed ?? name);
   const fg = dim ? t.ink2 : '#fff';
+  // Fall back to initials if the image URL fails to load (broken link / offline).
+  const [failed, setFailed] = React.useState(false);
+  const showImage = !!uri && !failed;
+  React.useEffect(() => setFailed(false), [uri]);
   return (
     <View
       style={{
@@ -46,16 +52,25 @@ export function Avatar({ name, seed, size = 40, me, ring, dim }: AvatarProps) {
         backgroundColor: bg,
         alignItems: 'center',
         justifyContent: 'center',
+        overflow: 'hidden',
         ...(ring ? { borderWidth: 2.5, borderColor: t.surface } : {}),
       }}
     >
-      <Txt
-        color={fg}
-        style={{ fontFamily: Font.semibold, fontSize: size * 0.38, lineHeight: size * 0.46 }}
-      >
-        {name ? initialsOf(name) : 'You'.slice(0, 2).toUpperCase()}
-        {/* {me ? 'You'.slice(0, 2).toUpperCase() : initialsOf(name)} */}
-      </Txt>
+      {showImage ? (
+        <Image
+          source={{ uri: uri! }}
+          style={{ width: size, height: size }}
+          resizeMode="cover"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <Txt
+          color={fg}
+          style={{ fontFamily: Font.semibold, fontSize: size * 0.38, lineHeight: size * 0.46 }}
+        >
+          {name ? initialsOf(name) : 'You'.slice(0, 2).toUpperCase()}
+        </Txt>
+      )}
     </View>
   );
 }

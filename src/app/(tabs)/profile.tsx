@@ -23,7 +23,7 @@ export default function ProfileTab() {
     >
         {/* identity */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 4, paddingBottom: 18 }}>
-          <Avatar name={user?.fullName} seed={user?.id} me size={64} />
+          <Avatar name={user?.fullName} seed={user?.id} uri={user?.avatarUrl} me size={64} />
           <View style={{ flex: 1 }}>
             <Txt variant="title3">{user?.fullName ?? 'Your name'}</Txt>
             <Txt tone="ink2" variant="caption" style={{ marginTop: 1 }}>

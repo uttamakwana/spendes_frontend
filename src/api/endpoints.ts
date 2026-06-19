@@ -1,3 +1,4 @@
+import { api } from './client';
 import { del, get, patch, post } from './http';
 import type {
   AnalyticsOverview,
@@ -62,6 +63,17 @@ export const usersApi = {
   /** Updates per-category push opt-outs (partial — send only changed keys). */
   updateNotificationPreferences: (body: Partial<NotificationPreferences>) =>
     patch<User>('/users/me/notification-preferences', body),
+  /** Uploads/replaces the profile photo. `image` is a picked local file (RN multipart shape). */
+  uploadAvatar: (image: { uri: string; name: string; type: string }) => {
+    const form = new FormData();
+    // React Native's FormData accepts this { uri, name, type } file descriptor.
+    form.append('image', image as unknown as Blob);
+    return api.post('/users/me/avatar', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }) as unknown as Promise<User>;
+  },
+  /** Removes the profile photo. */
+  removeAvatar: () => del<User>('/users/me/avatar'),
   /** Permanently deletes the authenticated user's account and all their data. */
   deleteAccount: () => del<{ deleted: boolean }>('/users/me'),
 };
