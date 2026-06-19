@@ -145,6 +145,9 @@ export function Bars({
             />
             <Txt
               tone={hl ? 'ink' : 'ink3'}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
               style={{ fontFamily: hl ? Font.semibold : Font.medium, fontSize: 11, marginTop: 6 }}
             >
               {labels[i]}
