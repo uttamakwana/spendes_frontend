@@ -5,6 +5,7 @@ import React from 'react';
 import { Alert, Pressable, View } from 'react-native';
 
 import type { AppNotification, NotificationType } from '@/api';
+import { errorMessage } from '@/api';
 import {
   useDisputeNotification,
   useMarkAllNotificationsRead,
@@ -46,10 +47,22 @@ export default function NotificationsInbox() {
   const onDispute = (n: AppNotification) => {
     Alert.alert(
       'Flag this as wrong?',
-      'We’ll let the person who added it know so they can correct or remove it. Nothing is deleted automatically.',
+      'We’ll let the person who added it know so they can correct or remove it. Flagging is a heads-up — it doesn’t delete the split or change the amount on its own.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Flag it', style: 'destructive', onPress: () => dispute.mutate(n.id) },
+        {
+          text: 'Flag it',
+          style: 'destructive',
+          onPress: () =>
+            dispute.mutate(n.id, {
+              onSuccess: () =>
+                Alert.alert(
+                  'Flagged ✓',
+                  'We’ve let them know so they can review it. The amount stays until they correct or remove the split.',
+                ),
+              onError: (e) => Alert.alert('Couldn’t flag', errorMessage(e)),
+            }),
+        },
       ],
     );
   };

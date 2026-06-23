@@ -66,6 +66,8 @@ export default function FriendDetail() {
                 <Button
                   variant={owed ? 'soft' : 'primary'}
                   icon={owed ? 'notifications' : 'phone-portrait'}
+                  full={false}
+                  style={{ flex: 1 }}
                   onPress={() =>
                     owed
                       ? undefined
@@ -79,6 +81,7 @@ export default function FriendDetail() {
                 <Button
                   variant="outline"
                   full={false}
+                  style={{ flex: 1 }}
                   onPress={() =>
                     router.push(
                       `/settle?kind=friend&id=${id}&toMemberId=${owed ? f.myMemberId : f.friendMemberId}&fromMemberId=${owed ? f.friendMemberId : f.myMemberId}&amount=${Math.abs(f.net)}&name=${encodeURIComponent(f.displayName)}&incoming=${owed ? 1 : 0}`,
