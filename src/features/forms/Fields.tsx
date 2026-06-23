@@ -146,21 +146,39 @@ export function ChipSelect<T extends string>({
   );
 }
 
+export interface WhenPickerOptions {
+  /** 'datetime' (default) captures date + time; 'date' captures the day only. */
+  mode?: 'date' | 'datetime';
+  /** Latest selectable date. Defaults to now (past only). Pass `null` to allow the future. */
+  maximumDate?: Date | null;
+  /** Earliest selectable date. */
+  minimumDate?: Date;
+}
+
 /**
- * Cross-platform date + time picker, shared by the add/edit screens. Android has no
- * single "datetime" picker, so it chains a date dialog into a time dialog (via the
- * imperative DateTimePickerAndroid API) and merges them; iOS shows one datetime
- * spinner in a sheet. Picks are capped at the present. Returns `open()` to launch it
- * and `element` to render.
+ * Cross-platform date / date+time picker shared by the forms. Android has no single
+ * "datetime" picker, so for datetime it chains a date dialog into a time dialog and
+ * merges them; iOS shows one spinner in a sheet. By default picks are capped at the
+ * present (for back-dating records) — pass `maximumDate: null` to allow future dates
+ * (e.g. an EMI's next debit date). Returns `open()` to launch it and `element` to render.
  */
-export function useWhenPicker(value: Date, onChange: (d: Date) => void) {
+export function useWhenPicker(
+  value: Date,
+  onChange: (d: Date) => void,
+  options: WhenPickerOptions = {},
+) {
   const t = useTheme();
   const [iosOpen, setIosOpen] = useState(false);
+  const mode = options.mode ?? 'datetime';
+  const maximumDate = options.maximumDate === null ? undefined : (options.maximumDate ?? new Date());
+  const minimumDate = options.minimumDate;
 
-  // Never let the chosen instant land in the future.
+  // Belt-and-suspenders clamp (the native picker also enforces min/max).
   const commit = (d: Date) => {
-    const now = new Date();
-    onChange(d.getTime() > now.getTime() ? now : d);
+    let next = d;
+    if (maximumDate && next.getTime() > maximumDate.getTime()) next = maximumDate;
+    if (minimumDate && next.getTime() < minimumDate.getTime()) next = minimumDate;
+    onChange(next);
   };
 
   const open = () => {
@@ -168,11 +186,24 @@ export function useWhenPicker(value: Date, onChange: (d: Date) => void) {
       setIosOpen(true);
       return;
     }
-    // Android: pick the date, then the time, then combine the two.
+    if (mode === 'date') {
+      DateTimePickerAndroid.open({
+        value,
+        mode: 'date',
+        maximumDate,
+        minimumDate,
+        onChange: (event, picked) => {
+          if (event.type === 'set' && picked) commit(picked);
+        },
+      });
+      return;
+    }
+    // datetime: pick the date, then the time, then combine the two.
     DateTimePickerAndroid.open({
       value,
       mode: 'date',
-      maximumDate: new Date(),
+      maximumDate,
+      minimumDate,
       onChange: (dateEvent, pickedDate) => {
         if (dateEvent.type !== 'set' || !pickedDate) return;
         DateTimePickerAndroid.open({
@@ -195,9 +226,10 @@ export function useWhenPicker(value: Date, onChange: (d: Date) => void) {
       <View style={{ alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16 }}>
         <DateTimePicker
           value={value}
-          mode="datetime"
+          mode={mode}
           display="inline"
-          maximumDate={new Date()}
+          maximumDate={maximumDate}
+          minimumDate={minimumDate}
           themeVariant={t.dark ? 'dark' : 'light'}
           onChange={(_, selected) => selected && commit(selected)}
         />
@@ -219,18 +251,30 @@ export function formatWhen(value: Date): string {
   return `${day}, ${format(value, 'h:mm a')}`;
 }
 
-/** Labeled date + time field — tap to set exactly when a record happened. Capped at now. */
+/** "Today" / "12 Jun 2025" — a date for display (no time). */
+export function formatDay(value: Date): string {
+  return isToday(value) ? 'Today' : format(value, 'd MMM yyyy');
+}
+
+/** Labeled date (or date + time) field. Defaults to date+time capped at now. */
 export function DateField({
   value,
   onChange,
   label = 'Date',
+  mode,
+  maximumDate,
+  minimumDate,
 }: {
   value: Date;
   onChange: (d: Date) => void;
   label?: string;
+  mode?: 'date' | 'datetime';
+  maximumDate?: Date | null;
+  minimumDate?: Date;
 }) {
   const t = useTheme();
-  const { open, element } = useWhenPicker(value, onChange);
+  const { open, element } = useWhenPicker(value, onChange, { mode, maximumDate, minimumDate });
+  const text = (mode ?? 'datetime') === 'date' ? formatDay(value) : formatWhen(value);
 
   return (
     <View>
@@ -254,7 +298,7 @@ export function DateField({
         <View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: t.fill, alignItems: 'center', justifyContent: 'center' }}>
           <Ionicons name="calendar-outline" size={17} color={t.ink2} />
         </View>
-        <Txt style={{ flex: 1 }}>{formatWhen(value)}</Txt>
+        <Txt style={{ flex: 1 }}>{text}</Txt>
         <Ionicons name="chevron-down" size={18} color={t.ink3} />
       </Pressable>
       {element}

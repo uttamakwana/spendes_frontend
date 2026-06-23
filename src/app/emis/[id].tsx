@@ -1,26 +1,47 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import React from 'react';
-import { ScrollView, View } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 
-import { useEmi } from '@/features/hooks';
+import { errorMessage } from '@/api';
+import { useDeleteEmi, useEmi } from '@/features/hooks';
 import { categoryStyle } from '@/lib/categories';
 import { money } from '@/lib/money';
 import { hexA, useTheme } from '@/theme';
-import { Card, MoneyText, ProgressBar, Screen, Skeleton, Txt, TopBar } from '@/ui';
+import { Button, Card, IconButton, MoneyText, ProgressBar, Screen, Skeleton, Txt, TopBar } from '@/ui';
 
 export default function EmiDetail() {
   const t = useTheme();
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: e, isLoading } = useEmi(id);
+  const del = useDeleteEmi();
   const color = e ? categoryStyle(e.category ?? e.name).color : t.accent;
   const hasInstallments = !!e?.tenureCount;
   const pct = hasInstallments && e ? Math.round((e.installmentsPaid / e.tenureCount!) * 100) : 0;
 
+  const confirmDelete = () => {
+    Alert.alert('Delete this EMI?', 'It will be removed from your commitments. This can’t be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () =>
+          del.mutate(id, {
+            onSuccess: () => router.back(),
+            onError: (err) => Alert.alert('Could not delete', errorMessage(err)),
+          }),
+      },
+    ]);
+  };
+
   return (
     <Screen>
-      <TopBar title={e?.name ?? 'EMI'} />
+      <TopBar
+        title={e?.name ?? 'EMI'}
+        right={<IconButton name="create-outline" onPress={() => router.push(`/emis/edit?id=${id}`)} />}
+      />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32, gap: 14 }}>
         {isLoading || !e ? (
           <Skeleton height={220} radius={16} />
@@ -60,6 +81,10 @@ export default function EmiDetail() {
               {e.remainingAmount != null && <Row label="Remaining" value={money(e.remainingAmount)} />}
               {e.endDate && <Row label="Projected end" value={format(new Date(e.endDate), 'MMM yyyy')} />}
             </Card>
+
+            <Button variant="danger" icon="trash-outline" loading={del.isPending} onPress={confirmDelete}>
+              Delete EMI
+            </Button>
           </>
         )}
       </ScrollView>

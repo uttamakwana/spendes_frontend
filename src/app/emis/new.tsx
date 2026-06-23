@@ -3,9 +3,8 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 
 import { errorMessage } from '@/api';
-import { AmountField, ChipSelect, LabeledInput } from '@/features/forms/Fields';
+import { AmountField, ChipSelect, DateField, LabeledInput } from '@/features/forms/Fields';
 import { useCreateEmi } from '@/features/hooks';
-import { todayISO } from '@/lib/date';
 import { Button, CollapsibleScreen, Txt } from '@/ui';
 
 export default function NewEmi() {
@@ -17,6 +16,8 @@ export default function NewEmi() {
   const [amount, setAmount] = useState('');
   const [frequency, setFrequency] = useState('monthly');
   const [tenure, setTenure] = useState('');
+  // The date the EMI is debited — its day-of-month becomes the recurring debit day.
+  const [debitDate, setDebitDate] = useState(new Date());
   const [error, setError] = useState<string | null>(null);
 
   const amt = parseInt(amount, 10) || 0;
@@ -30,7 +31,7 @@ export default function NewEmi() {
         type,
         amount: amt,
         frequency,
-        startDate: todayISO(),
+        startDate: debitDate.toISOString(),
         tenureCount: tenure ? parseInt(tenure, 10) : undefined,
       },
       { onSuccess: () => router.back(), onError: (e) => setError(errorMessage(e)) },
@@ -63,6 +64,13 @@ export default function NewEmi() {
             { value: 'quarterly', label: 'Quarterly' },
             { value: 'yearly', label: 'Yearly' },
           ]}
+        />
+        <DateField
+          label="Debit date"
+          value={debitDate}
+          onChange={setDebitDate}
+          mode="date"
+          maximumDate={null}
         />
         <LabeledInput
           label="Number of installments (optional)"

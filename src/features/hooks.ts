@@ -240,6 +240,29 @@ export function useCreateEmi() {
     },
   });
 }
+export function useUpdateEmi(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (b: Partial<CreateEmiBody>) => emisApi.update(id, b),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.emis });
+      qc.invalidateQueries({ queryKey: qk.emiSummary });
+      qc.invalidateQueries({ queryKey: qk.emi(id) });
+      qc.invalidateQueries({ queryKey: ['analytics'] });
+    },
+  });
+}
+export function useDeleteEmi() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => emisApi.remove(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.emis });
+      qc.invalidateQueries({ queryKey: qk.emiSummary });
+      qc.invalidateQueries({ queryKey: ['analytics'] });
+    },
+  });
+}
 export function useCreateGoal() {
   const qc = useQueryClient();
   return useMutation({
