@@ -247,6 +247,8 @@ export interface CreateEmiBody {
   tenureCount?: number;
   autoDebit?: boolean;
   notes?: string;
+  /** Installments already paid (existing loan); the API translates it into the schedule. */
+  installmentsPaid?: number;
 }
 export const emisApi = {
   list: (page = 1, limit = 50) => get<Paginated<Emi>>('/emis', { page, limit }),
@@ -279,6 +281,14 @@ export const goalsApi = {
 };
 
 // ── Investments ────────────────────────────────────────────────────────────
+/** A recurring contribution plan (SIP): per-installment amount, cadence, next debit date. */
+export interface SipBody {
+  amount: number;
+  frequency: string;
+  /** ISO date — the next/first debit date; its day becomes the recurring debit day. */
+  startDate: string;
+  isActive?: boolean;
+}
 export interface CreateInvestmentBody {
   name: string;
   type: string;
@@ -288,6 +298,14 @@ export interface CreateInvestmentBody {
   quantity?: number;
   platform?: string;
   notes?: string;
+  sip?: SipBody;
+}
+/** Record one contribution (a SIP installment or a top-up), optionally refreshing value. */
+export interface ContributeInvestmentBody {
+  amount: number;
+  note?: string;
+  investedAt?: string;
+  currentValue?: number;
 }
 export const investmentsApi = {
   list: (page = 1, limit = 50) => get<Paginated<Investment>>('/investments', { page, limit }),
@@ -295,6 +313,8 @@ export const investmentsApi = {
   get: (id: string) => get<Investment>(`/investments/${id}`),
   create: (body: CreateInvestmentBody) => post<Investment>('/investments', body),
   update: (id: string, body: Partial<CreateInvestmentBody>) => patch<Investment>(`/investments/${id}`, body),
+  contribute: (id: string, body: ContributeInvestmentBody) =>
+    post<Investment>(`/investments/${id}/contribute`, body),
   remove: (id: string) => del<{ deleted: boolean }>(`/investments/${id}`),
 };
 

@@ -1,26 +1,48 @@
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, View } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 
-import { useBudget } from '@/features/hooks';
+import { errorMessage } from '@/api';
+import { useBudget, useDeleteBudget } from '@/features/hooks';
 import { money } from '@/lib/money';
 import { useTheme } from '@/theme';
-import { Card, MoneyText, ProgressRing, Screen, Skeleton, Txt, TopBar } from '@/ui';
+import { Button, Card, IconButton, MoneyText, ProgressRing, Screen, Skeleton, Txt, TopBar } from '@/ui';
 
 export default function BudgetDetail() {
   const t = useTheme();
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: b, isLoading } = useBudget(id);
+  const del = useDeleteBudget();
 
   const color = !b ? t.accent : b.status === 'exceeded' ? t.danger : b.status === 'warning' ? t.warning : t.success;
 
+  const confirmDelete = () => {
+    Alert.alert('Delete this budget?', 'It will stop tracking this limit. This can’t be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () =>
+          del.mutate(id, {
+            onSuccess: () => router.back(),
+            onError: (e) => Alert.alert('Could not delete', errorMessage(e)),
+          }),
+      },
+    ]);
+  };
+
   return (
     <Screen>
-      <TopBar title={b?.name ?? b?.category ?? 'Budget'} />
+      <TopBar
+        title={b?.name ?? b?.category ?? 'Budget'}
+        right={<IconButton name="create-outline" onPress={() => router.push(`/budgets/edit?id=${id}`)} />}
+      />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32, gap: 14 }}>
         {isLoading || !b ? (
           <Skeleton height={220} radius={16} />
         ) : (
+          <>
           <Card padding={20} style={{ alignItems: 'center' }}>
             <ProgressRing pct={b.percentUsed} size={132} stroke={12} color={color}>
               <Txt style={{ fontWeight: '700', fontSize: 26 }}>{Math.round(b.percentUsed)}%</Txt>
@@ -51,6 +73,10 @@ export default function BudgetDetail() {
               <Stat label="Period" value={b.period} cap />
             </View>
           </Card>
+          <Button variant="danger" icon="trash-outline" loading={del.isPending} onPress={confirmDelete}>
+            Delete budget
+          </Button>
+          </>
         )}
       </ScrollView>
     </Screen>

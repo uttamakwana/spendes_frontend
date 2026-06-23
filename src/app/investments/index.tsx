@@ -4,7 +4,6 @@ import React from 'react';
 import { View } from 'react-native';
 
 import { useInvestments, usePortfolio } from '@/features/hooks';
-import { money } from '@/lib/money';
 import { CAT_VIZ, hexA, useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
 import {
@@ -128,9 +127,18 @@ export default function Investments() {
                       <Txt variant="headline" numberOfLines={1}>
                         {inv.name}
                       </Txt>
-                      <Txt tone="ink3" variant="caption" style={{ textTransform: 'capitalize' }}>
-                        {inv.type.replace('_', ' ')}
-                      </Txt>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Txt tone="ink3" variant="caption" style={{ textTransform: 'capitalize' }}>
+                          {inv.type.replace('_', ' ')}
+                        </Txt>
+                        {inv.sip?.isActive && (
+                          <View style={{ backgroundColor: hexA(t.accent, 0.14), paddingHorizontal: 6, paddingVertical: 1, borderRadius: 5 }}>
+                            <Txt variant="micro" style={{ color: t.accent, fontFamily: Font.semibold }}>
+                              SIP
+                            </Txt>
+                          </View>
+                        )}
+                      </View>
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
                       <MoneyText value={inv.currentValue} size={14.5} weight="bold" />

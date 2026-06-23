@@ -229,6 +229,23 @@ export function useCreateBudget() {
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.budgets }),
   });
 }
+export function useUpdateBudget(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (b: Partial<CreateBudgetBody>) => budgetsApi.update(id, b),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.budgets });
+      qc.invalidateQueries({ queryKey: qk.budget(id) });
+    },
+  });
+}
+export function useDeleteBudget() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => budgetsApi.remove(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.budgets }),
+  });
+}
 export function useCreateEmi() {
   const qc = useQueryClient();
   return useMutation({
@@ -289,6 +306,42 @@ export function useUpdateInvestmentValue(id: string) {
       qc.invalidateQueries({ queryKey: qk.investments });
       qc.invalidateQueries({ queryKey: qk.portfolio });
       qc.invalidateQueries({ queryKey: qk.investment(id) });
+    },
+  });
+}
+export function useUpdateInvestment(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (b: Partial<CreateInvestmentBody>) => investmentsApi.update(id, b),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.investments });
+      qc.invalidateQueries({ queryKey: qk.portfolio });
+      qc.invalidateQueries({ queryKey: qk.investment(id) });
+      qc.invalidateQueries({ queryKey: ['analytics'] });
+    },
+  });
+}
+export function useContributeInvestment(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { amount: number; note?: string; currentValue?: number }) =>
+      investmentsApi.contribute(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.investments });
+      qc.invalidateQueries({ queryKey: qk.portfolio });
+      qc.invalidateQueries({ queryKey: qk.investment(id) });
+      qc.invalidateQueries({ queryKey: ['analytics'] });
+    },
+  });
+}
+export function useDeleteInvestment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => investmentsApi.remove(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.investments });
+      qc.invalidateQueries({ queryKey: qk.portfolio });
+      qc.invalidateQueries({ queryKey: ['analytics'] });
     },
   });
 }

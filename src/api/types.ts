@@ -356,6 +356,25 @@ export interface Goal {
 }
 
 // ── Investments ────────────────────────────────────────────────────────────
+export type SipFrequency = 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+
+/** Live, derived view of a holding's recurring contribution plan (SIP). */
+export interface InvestmentSip {
+  amount: number;
+  frequency: SipFrequency;
+  startDate: string;
+  isActive: boolean;
+  /** Per-installment amount normalized to a monthly figure. */
+  monthlyEquivalent: number;
+  /** Next scheduled debit date (omitted when paused). */
+  nextContributionDate?: string;
+  /** How many installments should have been made by now. */
+  expectedInstallments: number;
+  /** How many contributions have actually been recorded. */
+  recordedInstallments: number;
+  /** `max(0, expected − recorded)` — installments you may be behind on. */
+  installmentsBehind: number;
+}
 export interface Investment {
   id: string;
   name: string;
@@ -366,6 +385,7 @@ export interface Investment {
   quantity?: number;
   platform?: string;
   notes?: string;
+  sip?: InvestmentSip;
   isActive: boolean;
   gainLoss: number;
   gainLossPct: number;
@@ -376,6 +396,8 @@ export interface PortfolioSummary {
   totalCurrentValue: number;
   totalGainLoss: number;
   gainLossPct: number;
+  /** Combined monthly-equivalent of every active SIP — a recurring savings outflow. */
+  totalMonthlySip: number;
   allocation: { type: InvestmentType; currentValue: number; investedAmount: number; percent: number }[];
 }
 

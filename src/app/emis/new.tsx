@@ -16,11 +16,13 @@ export default function NewEmi() {
   const [amount, setAmount] = useState('');
   const [frequency, setFrequency] = useState('monthly');
   const [tenure, setTenure] = useState('');
-  // The date the EMI is debited — its day-of-month becomes the recurring debit day.
+  // The next time the EMI is debited — its day-of-month becomes the recurring debit day.
   const [debitDate, setDebitDate] = useState(new Date());
+  const [alreadyPaid, setAlreadyPaid] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const amt = parseInt(amount, 10) || 0;
+  const tenureNum = parseInt(tenure, 10) || 0;
   const valid = !!name.trim() && amt > 0;
 
   const submit = () => {
@@ -33,6 +35,8 @@ export default function NewEmi() {
         frequency,
         startDate: debitDate.toISOString(),
         tenureCount: tenure ? parseInt(tenure, 10) : undefined,
+        installmentsPaid:
+          tenureNum > 0 && alreadyPaid ? Math.min(parseInt(alreadyPaid, 10), tenureNum - 1) : undefined,
       },
       { onSuccess: () => router.back(), onError: (e) => setError(errorMessage(e)) },
     );
@@ -66,7 +70,7 @@ export default function NewEmi() {
           ]}
         />
         <DateField
-          label="Debit date"
+          label="Next debit date"
           value={debitDate}
           onChange={setDebitDate}
           mode="date"
@@ -79,6 +83,16 @@ export default function NewEmi() {
           placeholder="Leave empty for ongoing subscriptions"
           keyboardType="number-pad"
         />
+        {tenureNum > 0 && (
+          <LabeledInput
+            label="Installments already paid"
+            value={alreadyPaid}
+            onChangeText={(v) => setAlreadyPaid(v.replace(/[^0-9]/g, ''))}
+            placeholder="0"
+            keyboardType="number-pad"
+            hint={`Of ${tenureNum}. For an existing loan — we’ll set the schedule so it shows the rest.`}
+          />
+        )}
 
         {error && (
           <Txt tone="danger" variant="caption">

@@ -19,6 +19,7 @@ export default function EditEmi() {
   const [frequency, setFrequency] = useState('monthly');
   const [tenure, setTenure] = useState('');
   const [debitDate, setDebitDate] = useState(new Date());
+  const [alreadyPaid, setAlreadyPaid] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
@@ -29,12 +30,15 @@ export default function EditEmi() {
       setAmount(String(Math.round(emi.amount)));
       setFrequency(emi.frequency);
       setTenure(emi.tenureCount ? String(emi.tenureCount) : '');
-      setDebitDate(new Date(emi.startDate));
+      // The picker edits the *next* debit; startDate is the derived first installment.
+      setDebitDate(new Date(emi.nextDueDate ?? emi.startDate));
+      setAlreadyPaid(emi.tenureCount ? String(emi.installmentsPaid) : '');
       setHydrated(true);
     }
   }, [emi, hydrated]);
 
   const amt = parseInt(amount, 10) || 0;
+  const tenureNum = parseInt(tenure, 10) || 0;
   const valid = !!name.trim() && amt > 0;
 
   const submit = () => {
@@ -47,6 +51,8 @@ export default function EditEmi() {
         frequency,
         startDate: debitDate.toISOString(),
         tenureCount: tenure ? parseInt(tenure, 10) : undefined,
+        installmentsPaid:
+          tenureNum > 0 ? Math.min(parseInt(alreadyPaid || '0', 10), tenureNum - 1) : undefined,
       },
       { onSuccess: () => router.back(), onError: (e) => setError(errorMessage(e)) },
     );
@@ -87,7 +93,7 @@ export default function EditEmi() {
               { value: 'yearly', label: 'Yearly' },
             ]}
           />
-          <DateField label="Debit date" value={debitDate} onChange={setDebitDate} mode="date" maximumDate={null} />
+          <DateField label="Next debit date" value={debitDate} onChange={setDebitDate} mode="date" maximumDate={null} />
           <LabeledInput
             label="Number of installments (optional)"
             value={tenure}
@@ -95,6 +101,16 @@ export default function EditEmi() {
             placeholder="Leave empty for ongoing subscriptions"
             keyboardType="number-pad"
           />
+          {tenureNum > 0 && (
+            <LabeledInput
+              label="Installments already paid"
+              value={alreadyPaid}
+              onChangeText={(v) => setAlreadyPaid(v.replace(/[^0-9]/g, ''))}
+              placeholder="0"
+              keyboardType="number-pad"
+              hint={`Of ${tenureNum}. We’ll set the schedule so it shows the rest.`}
+            />
+          )}
 
           {error && (
             <Txt tone="danger" variant="caption">

@@ -1,7 +1,7 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { format, isToday } from 'date-fns';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import type { Category } from '@/api';
@@ -155,6 +155,30 @@ export interface WhenPickerOptions {
   minimumDate?: Date;
 }
 
+const pad2 = (n: number): string => String(n).padStart(2, '0');
+
+/** Formats a Date for an `<input type="date|datetime-local">` value (local time, not UTC). */
+function toDateInputValue(d: Date, withTime: boolean): string {
+  const day = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  return withTime ? `${day}T${pad2(d.getHours())}:${pad2(d.getMinutes())}` : day;
+}
+
+/** Parses an `<input type="date|datetime-local">` value back into a local Date. */
+function parseDateInput(str: string, withTime: boolean): Date | null {
+  if (!str) return null;
+  const [datePart, timePart] = str.split('T');
+  const [y, m, d] = datePart.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  let hh = 0;
+  let mm = 0;
+  if (withTime && timePart) {
+    const [h, min] = timePart.split(':').map(Number);
+    hh = h || 0;
+    mm = min || 0;
+  }
+  return new Date(y, m - 1, d, hh, mm, 0, 0);
+}
+
 /**
  * Cross-platform date / date+time picker shared by the forms. Android has no single
  * "datetime" picker, so for datetime it chains a date dialog into a time dialog and
@@ -169,7 +193,9 @@ export function useWhenPicker(
 ) {
   const t = useTheme();
   const [iosOpen, setIosOpen] = useState(false);
+  const webInputRef = useRef<any>(null);
   const mode = options.mode ?? 'datetime';
+  const withTime = mode !== 'date';
   const maximumDate = options.maximumDate === null ? undefined : (options.maximumDate ?? new Date());
   const minimumDate = options.minimumDate;
 
@@ -182,6 +208,19 @@ export function useWhenPicker(
   };
 
   const open = () => {
+    if (Platform.OS === 'web') {
+      // Native pickers are non-functional on react-native-web; drive the browser's
+      // own date control instead (a hidden <input> in `element`).
+      const el = webInputRef.current;
+      if (el) {
+        try {
+          el.showPicker();
+        } catch {
+          el.focus();
+        }
+      }
+      return;
+    }
     if (Platform.OS !== 'android') {
       setIosOpen(true);
       return;
@@ -221,7 +260,23 @@ export function useWhenPicker(
     });
   };
 
-  const element = (
+  const webInputProps = {
+    ref: webInputRef,
+    type: withTime ? 'datetime-local' : 'date',
+    value: toDateInputValue(value, withTime),
+    max: maximumDate ? toDateInputValue(maximumDate, withTime) : undefined,
+    min: minimumDate ? toDateInputValue(minimumDate, withTime) : undefined,
+    onChange: (e: any) => {
+      const d = parseDateInput(e?.target?.value ?? '', withTime);
+      if (d) commit(d);
+    },
+    // Visually hidden but kept in layout flow so the browser anchors its picker near the trigger.
+    style: { position: 'absolute', left: 0, bottom: 0, width: 1, height: 1, opacity: 0 },
+  };
+
+  const element = Platform.OS === 'web' ? (
+    React.createElement('input', webInputProps as any)
+  ) : (
     <Sheet open={iosOpen} onClose={() => setIosOpen(false)} title="When">
       <View style={{ alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16 }}>
         <DateTimePicker
