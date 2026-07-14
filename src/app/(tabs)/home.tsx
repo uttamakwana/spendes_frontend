@@ -139,7 +139,7 @@ export default function Home() {
           <Card padding={20}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <Txt variant="caption" tone="ink2">
-                Safe to spend
+                {safe >= 0 ? "Safe to spend" : "Need to earn"}
               </Txt>
               <View
                 style={{
@@ -154,7 +154,7 @@ export default function Home() {
               >
                 <Ionicons name="checkmark-circle" size={13} color={t.success} />
                 <Txt color={t.success} style={{ fontFamily: Font.semibold, fontSize: 12 }}>
-                  On track
+                  {safe >= 0 ? "On track" : "Needs attention"}
                 </Txt>
               </View>
             </View>
