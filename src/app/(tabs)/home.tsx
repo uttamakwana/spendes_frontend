@@ -58,7 +58,8 @@ export default function Home() {
   const expense = o?.expense ?? 0;
   const cashOut = o?.cashOutflow ?? 0;
   const fronted = Math.max(0, cashOut - expense);
-  const safe = Math.max(0, income - expense);
+  // const safe = Math.max(0, income - expense);
+  const safe = income - expense;
   const spentPct = income > 0 ? Math.min(100, (expense / income) * 100) : 0;
 
   const owed = friends.data?.totalYouAreOwed ?? 0;
