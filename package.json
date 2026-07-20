@@ -10,6 +10,8 @@
     "web": "expo start --web",
     "build": "expo export",
     "lint": "expo lint",
+    "android:dev": "npx eas-cli build -p android --profile development",
+    "ios:dev": "npx eas-cli build -p ios --profile development",
     "android:preview": "npx eas-cli build -p android --profile preview",
     "android:prod": "npx eas-cli build -p android --profile production",
     "ios:preview": "npx eas-cli build -p ios --profile preview",
