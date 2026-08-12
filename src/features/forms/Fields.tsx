@@ -276,6 +276,12 @@ export function useWhenPicker(
 
   const element = Platform.OS === 'web' ? (
     React.createElement('input', webInputProps as any)
+  ) : Platform.OS === 'android' ? (
+    // Android is driven entirely by the imperative `DateTimePickerAndroid.open()`
+    // in `open()`. A declarative <DateTimePicker> pops its own native dialog the
+    // instant it mounts — and our bottom sheet keeps children mounted even when
+    // closed — which made the picker reopen immediately after tapping "OK".
+    null
   ) : (
     <Sheet open={iosOpen} onClose={() => setIosOpen(false)} title="When">
       <View style={{ alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16 }}>
