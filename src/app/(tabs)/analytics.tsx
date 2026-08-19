@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCashflow, useOverview } from '@/features/hooks';
 import { categoryStyle } from '@/lib/categories';
 import { money } from '@/lib/money';
+import { useRefresh } from '@/lib/useRefresh';
 import { CAT_VIZ, hexA, useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
 import {
@@ -29,6 +30,7 @@ export default function AnalyticsTab() {
   const insets = useSafeAreaInsets();
   const overview = useOverview();
   const cashflow = useCashflow(6);
+  const { refreshing, onRefresh } = useRefresh([overview, cashflow]);
 
   const o = overview.data;
   const income = o?.income ?? 0;
@@ -52,6 +54,8 @@ export default function AnalyticsTab() {
     <CollapsibleScreen
       title="Insights"
       subtitle={o ? 'This month' : undefined}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
       contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 90, gap: 14 }}
     >
         {overview.isLoading ? (

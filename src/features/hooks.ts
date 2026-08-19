@@ -34,6 +34,7 @@ import {
   invalidateAfterGroupMutation,
   invalidateAfterTransaction,
 } from '@/data/invalidate';
+import { useWriteMutation } from './useWriteMutation';
 
 // ── Reference / dashboard ───────────────────────────────────────────────────
 export const useCategories = (type?: 'expense' | 'income') =>
@@ -115,21 +116,21 @@ export const useExpenseSummary = (range?: { from?: string; to?: string }) =>
   useQuery({ queryKey: qk.expenseSummary(range), queryFn: () => expensesApi.summary(range) });
 
 export function useCreateExpense() {
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (body: CreateExpenseBody) => expensesApi.create(body),
     onSuccess: invalidateAfterTransaction,
   });
 }
 
 export function useDeleteExpense() {
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (id: string) => expensesApi.remove(id),
     onSuccess: invalidateAfterTransaction,
   });
 }
 
 export function useCreateIncome() {
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (body: CreateIncomeBody) => incomeApi.create(body),
     onSuccess: invalidateAfterTransaction,
   });
@@ -137,7 +138,7 @@ export function useCreateIncome() {
 
 export function useUpdateExpense(id: string) {
   const qc = useQueryClient();
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (body: Partial<CreateExpenseBody>) => expensesApi.update(id, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.expense(id) });
@@ -159,7 +160,7 @@ export const useIncome = (id: string) =>
 
 export function useUpdateIncome(id: string) {
   const qc = useQueryClient();
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (body: Partial<CreateIncomeBody>) => incomeApi.update(id, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['income', id] });
@@ -169,7 +170,7 @@ export function useUpdateIncome(id: string) {
 }
 
 export function useDeleteIncome() {
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (id: string) => incomeApi.remove(id),
     onSuccess: invalidateAfterTransaction,
   });
@@ -191,7 +192,7 @@ export const useGoal = (id: string) =>
 
 export function useContributeGoal(id: string) {
   const qc = useQueryClient();
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (body: { amount: number; note?: string }) => goalsApi.contribute(id, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.goals });
@@ -224,14 +225,14 @@ export const useFriendExpenses = (id: string) =>
 // ── Plan create/update mutations ────────────────────────────────────────────
 export function useCreateBudget() {
   const qc = useQueryClient();
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (b: CreateBudgetBody) => budgetsApi.create(b),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.budgets }),
   });
 }
 export function useUpdateBudget(id: string) {
   const qc = useQueryClient();
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (b: Partial<CreateBudgetBody>) => budgetsApi.update(id, b),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.budgets });
@@ -241,14 +242,14 @@ export function useUpdateBudget(id: string) {
 }
 export function useDeleteBudget() {
   const qc = useQueryClient();
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (id: string) => budgetsApi.remove(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.budgets }),
   });
 }
 export function useCreateEmi() {
   const qc = useQueryClient();
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (b: CreateEmiBody) => emisApi.create(b),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.emis });
@@ -259,7 +260,7 @@ export function useCreateEmi() {
 }
 export function useUpdateEmi(id: string) {
   const qc = useQueryClient();
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (b: Partial<CreateEmiBody>) => emisApi.update(id, b),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.emis });
@@ -271,7 +272,7 @@ export function useUpdateEmi(id: string) {
 }
 export function useDeleteEmi() {
   const qc = useQueryClient();
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (id: string) => emisApi.remove(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.emis });
@@ -282,14 +283,14 @@ export function useDeleteEmi() {
 }
 export function useCreateGoal() {
   const qc = useQueryClient();
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (b: CreateGoalBody) => goalsApi.create(b),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.goals }),
   });
 }
 export function useCreateInvestment() {
   const qc = useQueryClient();
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (b: CreateInvestmentBody) => investmentsApi.create(b),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.investments });
@@ -300,7 +301,7 @@ export function useCreateInvestment() {
 }
 export function useUpdateInvestmentValue(id: string) {
   const qc = useQueryClient();
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (currentValue: number) => investmentsApi.update(id, { currentValue }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.investments });
@@ -311,7 +312,7 @@ export function useUpdateInvestmentValue(id: string) {
 }
 export function useUpdateInvestment(id: string) {
   const qc = useQueryClient();
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (b: Partial<CreateInvestmentBody>) => investmentsApi.update(id, b),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.investments });
@@ -323,7 +324,7 @@ export function useUpdateInvestment(id: string) {
 }
 export function useContributeInvestment(id: string) {
   const qc = useQueryClient();
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (body: { amount: number; note?: string; currentValue?: number }) =>
       investmentsApi.contribute(id, body),
     onSuccess: () => {
@@ -336,7 +337,7 @@ export function useContributeInvestment(id: string) {
 }
 export function useDeleteInvestment() {
   const qc = useQueryClient();
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (id: string) => investmentsApi.remove(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.investments });
@@ -349,26 +350,26 @@ export function useDeleteInvestment() {
 // ── Social mutations ────────────────────────────────────────────────────────
 export function useCreateGroup() {
   const qc = useQueryClient();
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (b: { name: string; description?: string; members?: MemberInput[] }) => groupsApi.create(b),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.groups }),
   });
 }
 export function useAddFriend() {
   const qc = useQueryClient();
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (b: MemberInput) => friendsApi.add(b),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.friends }),
   });
 }
 export function useCreateGroupSplit(groupId: string) {
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (b: CreateSplitBody) => splitsApi.createExpense(groupId, b),
     onSuccess: () => invalidateAfterGroupMutation(groupId),
   });
 }
 export function useCreateFriendSplit(friendshipId: string) {
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (b: CreateSplitBody) => friendsApi.createExpense(friendshipId, b),
     onSuccess: () => invalidateAfterFriendMutation(friendshipId),
   });
@@ -383,13 +384,13 @@ type RecordSettlementBody = {
   reference?: string;
 };
 export function useRecordGroupSettlement(groupId: string) {
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (b: RecordSettlementBody) => splitsApi.recordSettlement(groupId, b),
     onSuccess: () => invalidateAfterGroupMutation(groupId),
   });
 }
 export function useRecordFriendSettlement(friendshipId: string) {
-  return useMutation({
+  return useWriteMutation({
     mutationFn: (b: RecordSettlementBody) => friendsApi.recordSettlement(friendshipId, b),
     onSuccess: () => invalidateAfterFriendMutation(friendshipId),
   });

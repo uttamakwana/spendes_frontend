@@ -1,7 +1,7 @@
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import React, { useRef } from 'react';
-import { Animated, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { Animated, Platform, RefreshControl, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { hexA, useTheme } from '@/theme';
@@ -23,6 +23,8 @@ export function CollapsibleScreen({
   children,
   contentContainerStyle,
   background,
+  refreshing,
+  onRefresh,
 }: {
   title: string;
   subtitle?: string;
@@ -32,6 +34,9 @@ export function CollapsibleScreen({
   children: React.ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
   background?: string;
+  /** Enables pull-to-refresh — pair with `useRefresh`. */
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }) {
   const t = useTheme();
   const router = useRouter();
@@ -40,9 +45,17 @@ export function CollapsibleScreen({
   const back = onBack ?? (() => router.back());
   const canBack = showBack ?? (onBack !== undefined || router.canGoBack());
 
+  const isIOS = Platform.OS === 'ios';
   const navH = insets.top + 44;
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const fade = scrollY.interpolate({ inputRange: [14, 46], outputRange: [0, 1], extrapolate: 'clamp' });
+  // On iOS the pull-to-refresh spinner anchors to the scroll view's contentInset
+  // (so it lands below the notch); that shifts the resting scroll offset to -navH.
+  // The collapse fade tracks that shifted baseline. Android keeps padding + a 0 base.
+  const scrollY = useRef(new Animated.Value(isIOS ? -navH : 0)).current;
+  const fade = scrollY.interpolate({
+    inputRange: isIOS ? [14 - navH, 46 - navH] : [14, 46],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
 
   return (
     <View style={{ flex: 1, backgroundColor: background ?? t.canvas2 }}>
@@ -52,7 +65,22 @@ export function CollapsibleScreen({
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
-        contentContainerStyle={{ paddingTop: navH + 4 }}
+        contentInsetAdjustmentBehavior="never"
+        contentInset={isIOS ? { top: navH } : undefined}
+        contentOffset={isIOS ? { x: 0, y: -navH } : undefined}
+        contentContainerStyle={{ paddingTop: isIOS ? 4 : navH + 4 }}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={!!refreshing}
+              onRefresh={onRefresh}
+              progressViewOffset={isIOS ? 0 : navH}
+              tintColor={t.accent}
+              colors={[t.accent]}
+              progressBackgroundColor={t.surface}
+            />
+          ) : undefined
+        }
       >
         <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
           <Txt variant="title1">{title}</Txt>

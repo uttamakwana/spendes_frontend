@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleProp, View, ViewStyle } from 'react-native';
 
+import { haptics } from '@/lib/haptics';
 import { useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
 import { Txt } from './Text';
@@ -39,7 +40,10 @@ export function Segmented<T extends string>({
         return (
           <Pressable
             key={o.value}
-            onPress={() => onChange(o.value)}
+            onPress={() => {
+              if (!active) haptics.selection();
+              onChange(o.value);
+            }}
             style={{
               flex: 1,
               height: 32,
@@ -87,7 +91,14 @@ export function UnderlineTabs<T extends string>({
       {options.map((o) => {
         const active = o.value === value;
         return (
-          <Pressable key={o.value} onPress={() => onChange(o.value)} style={{ paddingVertical: 12 }}>
+          <Pressable
+            key={o.value}
+            onPress={() => {
+              if (!active) haptics.selection();
+              onChange(o.value);
+            }}
+            style={{ paddingVertical: 12 }}
+          >
             <Txt
               tone={active ? 'ink' : 'ink3'}
               style={{ fontFamily: active ? Font.semibold : Font.medium, fontSize: 15 }}

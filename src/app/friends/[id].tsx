@@ -2,11 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import React from 'react';
-import { ScrollView, View } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
 
 import type { GroupExpense } from '@/api';
 import { useFriend, useFriendExpenses } from '@/features/hooks';
 import { money } from '@/lib/money';
+import { useRefresh } from '@/lib/useRefresh';
 import { useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
 import { Avatar, Button, Card, Screen, Skeleton, Txt, TopBar } from '@/ui';
@@ -15,8 +16,9 @@ export default function FriendDetail() {
   const t = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: f, isLoading } = useFriend(id);
+  const { data: f, isLoading, refetch } = useFriend(id);
   const expenses = useFriendExpenses(id);
+  const { refreshing, onRefresh } = useRefresh([{ refetch }, expenses]);
 
   const owed = (f?.net ?? 0) > 0;
   const settled = (f?.net ?? 0) === 0;
@@ -30,7 +32,18 @@ export default function FriendDetail() {
   return (
     <Screen>
       <TopBar title="" />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}>
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={t.accent}
+            colors={[t.accent]}
+            progressBackgroundColor={t.surface}
+          />
+        }
+      >
         {isLoading || !f ? (
           <Skeleton height={160} radius={16} style={{ marginTop: 8 }} />
         ) : (

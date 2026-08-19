@@ -7,6 +7,7 @@ import type { Income } from '@/api';
 import { useIncomeList } from '@/features/hooks';
 import { incomeToItem, TxnRow } from '@/features/transactions/TxnRow';
 import { money } from '@/lib/money';
+import { useRefresh } from '@/lib/useRefresh';
 import { useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
 import { Button, Card, CollapsibleScreen, EmptyState, IconButton, MoneyText, Skeleton, Txt } from '@/ui';
@@ -21,8 +22,9 @@ function dateLabel(d: string) {
 export default function IncomeList() {
   const t = useTheme();
   const router = useRouter();
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useIncomeList();
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } = useIncomeList();
   const items: Income[] = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data]);
+  const { refreshing, onRefresh } = useRefresh([{ refetch }]);
   const monthTotal = items.reduce((s, i) => s + i.amount, 0);
 
   const groups = useMemo(() => {
@@ -38,6 +40,8 @@ export default function IncomeList() {
     <CollapsibleScreen
       title="Income"
       right={<IconButton name="add" bg={t.accent} color="#fff" onPress={() => router.push('/add-transaction?kind=income')} />}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
       contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
     >
         {isLoading ? (

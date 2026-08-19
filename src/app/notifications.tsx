@@ -12,6 +12,7 @@ import {
   useMarkNotificationRead,
   useNotifications,
 } from '@/features/hooks';
+import { useRefresh } from '@/lib/useRefresh';
 import { hexA, useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
 import { Card, CollapsibleScreen, EmptyState, Skeleton, Txt } from '@/ui';
@@ -29,10 +30,11 @@ const STYLE: Record<NotificationType, { icon: IconName; color: string }> = {
 export default function NotificationsInbox() {
   const t = useTheme();
   const router = useRouter();
-  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useNotifications();
+  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage, refetch } = useNotifications();
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
   const dispute = useDisputeNotification();
+  const { refreshing, onRefresh } = useRefresh([{ refetch }]);
 
   const items = data?.pages.flatMap((p) => p.items) ?? [];
   const unread = items.some((n) => !n.isRead);
@@ -79,6 +81,8 @@ export default function NotificationsInbox() {
           </Pressable>
         ) : undefined
       }
+      refreshing={refreshing}
+      onRefresh={onRefresh}
       contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
     >
       {isLoading ? (

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Platform, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/auth/AuthProvider';
@@ -17,6 +17,7 @@ import {
 } from '@/features/hooks';
 import { expenseToItem, TxnRow } from '@/features/transactions/TxnRow';
 import { money } from '@/lib/money';
+import { useRefresh } from '@/lib/useRefresh';
 import { hexA, useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
 import {
@@ -51,7 +52,10 @@ export default function Home() {
   const goals = useGoals();
   const groups = useGroups();
   const cashflow = useCashflow(6);
-  const unreadCount = useUnreadCount().data?.count ?? 0;
+  const unread = useUnreadCount();
+  const unreadCount = unread.data?.count ?? 0;
+
+  const { refreshing, onRefresh } = useRefresh([overview, friends, recent, budgets, goals, groups, cashflow, unread]);
 
   const o = overview.data;
   const income = o?.income ?? 0;
@@ -82,7 +86,20 @@ export default function Home() {
     <View style={{ flex: 1, backgroundColor: t.canvas2 }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: insets.top + 6, paddingBottom: insets.bottom + 90 }}
+        contentInsetAdjustmentBehavior="never"
+        contentInset={Platform.OS === 'ios' ? { top: insets.top } : undefined}
+        contentOffset={Platform.OS === 'ios' ? { x: 0, y: -insets.top } : undefined}
+        contentContainerStyle={{ paddingTop: Platform.OS === 'ios' ? 6 : insets.top + 6, paddingBottom: insets.bottom + 90 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            progressViewOffset={Platform.OS === 'ios' ? 0 : insets.top + 6}
+            tintColor={t.accent}
+            colors={[t.accent]}
+            progressBackgroundColor={t.surface}
+          />
+        }
       >
         {/* header */}
         <View
@@ -161,7 +178,7 @@ export default function Home() {
             {overview.isLoading ? (
               <Skeleton width={180} height={40} style={{ marginTop: 8 }} />
             ) : (
-              <MoneyText value={safe} size={42} weight="bold" style={{ marginTop: 4 }} />
+              <MoneyText value={safe} size={42} weight="bold" animate style={{ marginTop: 4 }} />
             )}
             <Txt tone="ink3" variant="caption" style={{ marginTop: 4 }}>
               this month · income vs spend
@@ -230,7 +247,7 @@ export default function Home() {
                 <Txt variant="caption" tone="ink2">
                   Net worth
                 </Txt>
-                <MoneyText value={netWorth} size={22} weight="bold" style={{ marginTop: 2 }} />
+                <MoneyText value={netWorth} size={22} weight="bold" animate style={{ marginTop: 2 }} />
                 <Txt tone="ink3" variant="micro" style={{ marginTop: 4 }}>
                   assets − liabilities
                 </Txt>
@@ -414,7 +431,7 @@ function StatTile({
           <Ionicons name={icon} size={13} color={color} />
         </View>
       </View>
-      <MoneyText value={value} size={20} weight="bold" color={color} style={{ marginTop: 8 }} />
+      <MoneyText value={value} size={20} weight="bold" color={color} animate style={{ marginTop: 8 }} />
     </Pressable>
   );
 }

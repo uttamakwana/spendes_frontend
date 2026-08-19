@@ -6,6 +6,7 @@ import { View } from 'react-native';
 import { useEmis, useEmiSummary } from '@/features/hooks';
 import { categoryStyle } from '@/lib/categories';
 import { money } from '@/lib/money';
+import { useRefresh } from '@/lib/useRefresh';
 import { hexA, useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
 import { Card, CollapsibleScreen, EmptyState, IconButton, MoneyText, SectionHeader, Skeleton, Txt } from '@/ui';
@@ -16,6 +17,7 @@ export default function Emis() {
   const router = useRouter();
   const list = useEmis();
   const summary = useEmiSummary();
+  const { refreshing, onRefresh } = useRefresh([list, summary]);
   const items = list.data?.items ?? [];
   const s = summary.data;
 
@@ -23,6 +25,8 @@ export default function Emis() {
     <CollapsibleScreen
       title="EMIs & Recurring"
       right={<IconButton name="add" bg={t.accent} color="#fff" onPress={() => router.push('/emis/new')} />}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
       contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32, gap: 12 }}
     >
         <View style={{ backgroundColor: t.premium, borderRadius: 18, padding: 18 }}>

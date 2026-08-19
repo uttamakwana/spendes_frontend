@@ -1,6 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMutation } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -8,6 +6,7 @@ import { ActivityIndicator, Pressable, TextInput, View } from 'react-native';
 
 import { errorMessage, usersApi } from '@/api';
 import { useAuth } from '@/auth/AuthProvider';
+import { useWriteMutation } from '@/features/useWriteMutation';
 import { useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
 import { Avatar, Button, CollapsibleScreen, Txt } from '@/ui';
@@ -26,7 +25,7 @@ export default function ProfileEdit() {
   // instantly, so a spinner alone gives no perceptible feedback.
   const [showUpdated, setShowUpdated] = useState(false);
 
-  const save = useMutation({
+  const save = useWriteMutation({
     mutationFn: () =>
       usersApi.updateMe({
         firstName: firstName.trim(),
@@ -41,18 +40,17 @@ export default function ProfileEdit() {
     onError: (e) => setError(errorMessage(e)),
   });
 
-  const upload = useMutation({
+  const upload = useWriteMutation({
     mutationFn: (file: { uri: string; name: string; type: string }) => usersApi.uploadAvatar(file),
     onSuccess: (u) => {
       setUser(u);
       setError(null);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setShowUpdated(true);
       setTimeout(() => setShowUpdated(false), 2500);
     },
     onError: (e) => setError(errorMessage(e)),
   });
-  const removeAvatar = useMutation({
+  const removeAvatar = useWriteMutation({
     mutationFn: () => usersApi.removeAvatar(),
     onSuccess: (u) => {
       setUser(u);

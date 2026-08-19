@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import React from 'react';
 import { Platform, Pressable } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { haptics } from '@/lib/haptics';
 import { useTheme } from '@/theme';
 
 /**
@@ -37,7 +37,7 @@ export function AddFab({ onPress }: { onPress: () => void }) {
         scale.value = withSpring(1, { damping: 13, stiffness: 320 });
       }}
       onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+        haptics.medium();
         onPress();
       }}
       style={{ position: 'absolute', right: 20, bottom: TAB_BAR_HEIGHT + insets.bottom + 16 }}

@@ -4,6 +4,7 @@ import React from 'react';
 import { Pressable, View } from 'react-native';
 
 import { useFriends } from '@/features/hooks';
+import { useRefresh } from '@/lib/useRefresh';
 import { useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
 import { Avatar, BalancePill, Card, CollapsibleScreen, EmptyState, IconButton, MoneyText, Skeleton, Txt } from '@/ui';
@@ -11,13 +12,16 @@ import { Avatar, BalancePill, Card, CollapsibleScreen, EmptyState, IconButton, M
 export default function Friends() {
   const t = useTheme();
   const router = useRouter();
-  const { data, isLoading } = useFriends();
+  const { data, isLoading, refetch } = useFriends();
   const friends = data?.friends ?? [];
+  const { refreshing, onRefresh } = useRefresh([{ refetch }]);
 
   return (
     <CollapsibleScreen
       title="Friends"
       right={<IconButton name="person-add" bg={t.accent} color="#fff" onPress={() => router.push('/friends/add')} />}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
       contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
     >
         {/* summary */}

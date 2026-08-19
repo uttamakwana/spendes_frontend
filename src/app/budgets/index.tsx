@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import type { Budget } from '@/api';
 import { useBudgets } from '@/features/hooks';
 import { money } from '@/lib/money';
+import { useRefresh } from '@/lib/useRefresh';
 import { useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
 import {
@@ -29,8 +30,9 @@ const STATUS_LABEL: Record<Budget['status'], string> = { ok: 'On track', warning
 export default function Budgets() {
   const t = useTheme();
   const router = useRouter();
-  const { data, isLoading } = useBudgets();
+  const { data, isLoading, refetch } = useBudgets();
   const items = data?.items ?? [];
+  const { refreshing, onRefresh } = useRefresh([{ refetch }]);
   const overall = items.find((b) => !b.category);
   const cats = items.filter((b) => b.category);
 
@@ -38,6 +40,8 @@ export default function Budgets() {
     <CollapsibleScreen
       title="Budgets"
       right={<IconButton name="add" bg={t.accent} color="#fff" onPress={() => router.push('/budgets/new')} />}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
       contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32, gap: 12 }}
     >
         {isLoading ? (

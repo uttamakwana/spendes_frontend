@@ -1,14 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import React from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleProp,
-  View,
-  ViewStyle,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleProp, ViewStyle } from 'react-native';
 
+import { haptics } from '@/lib/haptics';
 import { hexA, useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
 import { Txt } from './Text';
@@ -57,7 +51,7 @@ export function Button({
 
   const handle = () => {
     if (disabled || loading) return;
-    if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    if (haptic) haptics.medium();
     onPress?.();
   };
 

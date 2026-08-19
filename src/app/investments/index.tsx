@@ -4,6 +4,7 @@ import React from 'react';
 import { View } from 'react-native';
 
 import { useInvestments, usePortfolio } from '@/features/hooks';
+import { useRefresh } from '@/lib/useRefresh';
 import { CAT_VIZ, hexA, useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
 import {
@@ -23,6 +24,7 @@ export default function Investments() {
   const router = useRouter();
   const list = useInvestments();
   const summary = usePortfolio();
+  const { refreshing, onRefresh } = useRefresh([list, summary]);
   const items = list.data?.items ?? [];
   const s = summary.data;
   const gain = s?.totalGainLoss ?? 0;
@@ -33,6 +35,8 @@ export default function Investments() {
     <CollapsibleScreen
       title="Investments"
       right={<IconButton name="add" bg={t.accent} color="#fff" onPress={() => router.push('/investments/new')} />}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
       contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32, gap: 12 }}
     >
         {summary.isLoading ? (

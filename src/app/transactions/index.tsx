@@ -8,6 +8,7 @@ import type { Expense } from '@/api';
 import { useExpenses } from '@/features/hooks';
 import { expenseToItem, TxnRow } from '@/features/transactions/TxnRow';
 import { money } from '@/lib/money';
+import { useRefresh } from '@/lib/useRefresh';
 import { useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
 import { Button, Card, CollapsibleScreen, EmptyState, IconButton, Skeleton, Txt } from '@/ui';
@@ -36,8 +37,9 @@ export default function Transactions() {
     [search, method],
   );
 
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useExpenses(filters);
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } = useExpenses(filters);
   const items: Expense[] = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data]);
+  const { refreshing, onRefresh } = useRefresh([{ refetch }]);
 
   const groups = useMemo(() => {
     const map: Record<string, Expense[]> = {};
@@ -52,6 +54,8 @@ export default function Transactions() {
     <CollapsibleScreen
       title="Transactions"
       right={<IconButton name="arrow-down-circle-outline" onPress={() => router.push('/income')} />}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
       contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
     >
         {/* search */}

@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useGroups } from '@/features/hooks';
+import { useRefresh } from '@/lib/useRefresh';
 import { hexA, useTheme } from '@/theme';
 import {
   AvatarStack,
@@ -22,11 +23,14 @@ export default function GroupsTab() {
   const insets = useSafeAreaInsets();
   const { data, isLoading, isError, refetch } = useGroups();
   const groups = data?.items ?? [];
+  const { refreshing, onRefresh } = useRefresh([{ refetch }]);
 
   return (
     <CollapsibleScreen
       title="Groups"
       right={<IconButton name="add" bg={t.accent} color="#fff" onPress={() => router.push('/groups/new')} />}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
       contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 90, gap: 12 }}
     >
         {isLoading ? (

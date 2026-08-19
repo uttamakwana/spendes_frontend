@@ -2,12 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import React, { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { GroupExpense, SuggestedTransfer } from '@/api';
 import { useGroup, useGroupBalances, useGroupExpenses } from '@/features/hooks';
 import { money } from '@/lib/money';
+import { useRefresh } from '@/lib/useRefresh';
 import { hexA, useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
 import {
@@ -34,6 +35,7 @@ export default function GroupDetail() {
   const group = useGroup(id);
   const expenses = useGroupExpenses(id);
   const balances = useGroupBalances(id);
+  const { refreshing, onRefresh } = useRefresh([group, expenses, balances]);
 
   const g = group.data;
   const myNet = balances.data?.myNet ?? 0;
@@ -98,7 +100,18 @@ export default function GroupDetail() {
         />
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 16, gap: 8 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={t.accent}
+            colors={[t.accent]}
+            progressBackgroundColor={t.surface}
+          />
+        }
+      >
         {tab === 'expenses' &&
           (expenses.isLoading ? (
             [0, 1, 2].map((i) => <Skeleton key={i} height={64} radius={14} />)
