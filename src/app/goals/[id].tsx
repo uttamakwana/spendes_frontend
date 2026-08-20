@@ -51,7 +51,7 @@ export default function GoalDetail() {
                 <Ionicons name={(g.icon as keyof typeof Ionicons.glyphMap) || 'flag'} size={22} color={color} />
                 <Txt style={{ fontFamily: Font.bold, fontSize: 26, marginTop: 4 }}>{Math.round(g.progressPct)}%</Txt>
               </ProgressRing>
-              <MoneyText value={g.currentAmount} size={26} weight="bold" style={{ marginTop: 16 }} />
+              <MoneyText value={g.currentAmount} size={26} weight="bold" animate style={{ marginTop: 16 }} />
               <Txt tone="ink2" variant="caption" style={{ marginTop: 2 }}>
                 saved of <Txt color={t.ink} style={{ fontFamily: Font.semibold }}>{money(g.targetAmount)}</Txt>
               </Txt>

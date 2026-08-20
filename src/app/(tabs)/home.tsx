@@ -21,6 +21,7 @@ import { useRefresh } from '@/lib/useRefresh';
 import { hexA, useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
 import {
+  Appear,
   Avatar,
   AvatarStack,
   Card,
@@ -151,7 +152,8 @@ export default function Home() {
           </View>
         </View>
 
-        <View style={{ paddingHorizontal: 16, paddingTop: 14, gap: 14 }}>
+        <Appear rise={false}>
+          <View style={{ paddingHorizontal: 16, paddingTop: 14, gap: 14 }}>
           {/* Safe to spend hero */}
           <Card padding={20}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -380,7 +382,8 @@ export default function Home() {
               )}
             </Card>
           </View>
-        </View>
+          </View>
+        </Appear>
       </ScrollView>
     </View>
   );

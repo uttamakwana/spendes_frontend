@@ -2,10 +2,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { format, isToday, isYesterday } from 'date-fns';
 import React, { useMemo, useState } from 'react';
-import { ScrollView, TextInput, View } from 'react-native';
+import { Alert, ScrollView, TextInput, View } from 'react-native';
 
 import type { Expense } from '@/api';
-import { useExpenses } from '@/features/hooks';
+import { useDeleteExpense, useExpenses } from '@/features/hooks';
 import { expenseToItem, TxnRow } from '@/features/transactions/TxnRow';
 import { money } from '@/lib/money';
 import { useRefresh } from '@/lib/useRefresh';
@@ -40,6 +40,13 @@ export default function Transactions() {
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } = useExpenses(filters);
   const items: Expense[] = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data]);
   const { refreshing, onRefresh } = useRefresh([{ refetch }]);
+  const del = useDeleteExpense();
+
+  const confirmDelete = (id: string) =>
+    Alert.alert('Delete transaction?', 'This permanently removes it.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => del.mutate(id) },
+    ]);
 
   const groups = useMemo(() => {
     const map: Record<string, Expense[]> = {};
@@ -140,6 +147,7 @@ export default function Transactions() {
                       item={expenseToItem(e)}
                       last={i === txns.length - 1}
                       onPress={() => router.push(`/transactions/${e.id}`)}
+                      onDelete={() => confirmDelete(e.id)}
                     />
                   ))}
                 </Card>

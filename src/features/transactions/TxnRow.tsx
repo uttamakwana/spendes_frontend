@@ -1,6 +1,9 @@
+import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import React from 'react';
 import { Pressable, View } from 'react-native';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import Reanimated, { FadeInDown, FadeOut, useReducedMotion } from 'react-native-reanimated';
 
 import type { Expense, Income } from '@/api';
 import { useTheme } from '@/theme';
@@ -41,10 +44,23 @@ export function incomeToItem(i: Income): TxnItem {
   };
 }
 
-export function TxnRow({ item, onPress, last }: { item: TxnItem; onPress?: () => void; last?: boolean }) {
+export function TxnRow({
+  item,
+  onPress,
+  last,
+  onDelete,
+}: {
+  item: TxnItem;
+  onPress?: () => void;
+  last?: boolean;
+  /** When set, the row can be swiped left to reveal a Delete action. */
+  onDelete?: () => void;
+}) {
   const t = useTheme();
+  const reduce = useReducedMotion();
   const income = item.amount > 0;
-  return (
+
+  const row = (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
@@ -85,5 +101,35 @@ export function TxnRow({ item, onPress, last }: { item: TxnItem; onPress?: () =>
         )}
       </View>
     </Pressable>
+  );
+
+  return (
+    <Reanimated.View
+      entering={reduce ? undefined : FadeInDown.duration(260)}
+      exiting={reduce ? undefined : FadeOut.duration(160)}
+    >
+      {onDelete ? (
+        <ReanimatedSwipeable
+          friction={2}
+          rightThreshold={40}
+          overshootRight={false}
+          // Opaque so the row cleanly covers the red action until swiped — and
+          // stays opaque even while the row dims on press (avoids a red flash).
+          childrenContainerStyle={{ backgroundColor: t.surface }}
+          renderRightActions={() => (
+            <Pressable
+              onPress={onDelete}
+              style={{ width: 76, backgroundColor: t.danger, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Ionicons name="trash-outline" size={22} color="#fff" />
+            </Pressable>
+          )}
+        >
+          {row}
+        </ReanimatedSwipeable>
+      ) : (
+        row
+      )}
+    </Reanimated.View>
   );
 }

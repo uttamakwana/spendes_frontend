@@ -2,12 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, View } from 'react-native';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { useFriends } from '@/features/hooks';
 import { useRefresh } from '@/lib/useRefresh';
 import { useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
-import { Avatar, BalancePill, Card, CollapsibleScreen, EmptyState, IconButton, MoneyText, Skeleton, Txt } from '@/ui';
+import { Appear, Avatar, BalancePill, Card, CollapsibleScreen, EmptyState, IconButton, MoneyText, Skeleton, Txt } from '@/ui';
 
 export default function Friends() {
   const t = useTheme();
@@ -30,13 +31,13 @@ export default function Friends() {
             <Txt variant="caption" tone="ink2">
               You’re owed
             </Txt>
-            <MoneyText value={data?.totalYouAreOwed ?? 0} size={20} weight="bold" color={t.success} style={{ marginTop: 3 }} />
+            <MoneyText value={data?.totalYouAreOwed ?? 0} size={20} weight="bold" color={t.success} animate style={{ marginTop: 3 }} />
           </View>
           <View style={{ flex: 1, backgroundColor: t.dangerBg, borderRadius: 16, padding: 14 }}>
             <Txt variant="caption" tone="ink2">
               You owe
             </Txt>
-            <MoneyText value={data?.totalYouOwe ?? 0} size={20} weight="bold" color={t.danger} style={{ marginTop: 3 }} />
+            <MoneyText value={data?.totalYouOwe ?? 0} size={20} weight="bold" color={t.danger} animate style={{ marginTop: 3 }} />
           </View>
         </View>
 
@@ -56,38 +57,71 @@ export default function Friends() {
           />
         ) : (
           <Card padding={0} style={{ paddingHorizontal: 14 }}>
-            {friends.map((f, i) => (
-              <Pressable
-                key={f.friendshipId}
-                onPress={() => router.push(`/friends/${f.friendshipId}`)}
-                style={({ pressed }) => ({
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 13,
-                  paddingVertical: 12,
-                  borderBottomWidth: i === friends.length - 1 ? 0 : 1,
-                  borderBottomColor: t.hair,
-                  opacity: pressed ? 0.6 : 1,
-                })}
-              >
-                <Avatar name={f.displayName} seed={f.friendMemberId} uri={f.avatarUrl} size={44} />
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Txt variant="headline" numberOfLines={1}>
-                    {f.displayName}
-                  </Txt>
-                  <Txt tone="ink3" variant="caption">
-                    {f.isRegistered ? 'On Spendes' : 'Invited'}
-                  </Txt>
-                </View>
-                {f.net === 0 ? (
-                  <Txt tone="ink3" variant="caption" style={{ fontFamily: Font.semibold }}>
-                    settled
-                  </Txt>
-                ) : (
-                  <BalancePill net={f.net} />
-                )}
-              </Pressable>
-            ))}
+            {friends.map((f, i) => {
+              const owe = f.net < 0;
+              const row = (
+                <Pressable
+                  onPress={() => router.push(`/friends/${f.friendshipId}`)}
+                  style={({ pressed }) => ({
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 13,
+                    paddingVertical: 12,
+                    borderBottomWidth: i === friends.length - 1 ? 0 : 1,
+                    borderBottomColor: t.hair,
+                    opacity: pressed ? 0.6 : 1,
+                  })}
+                >
+                  <Avatar name={f.displayName} seed={f.friendMemberId} uri={f.avatarUrl} size={44} />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Txt variant="headline" numberOfLines={1}>
+                      {f.displayName}
+                    </Txt>
+                    <Txt tone="ink3" variant="caption">
+                      {f.isRegistered ? 'On Spendes' : 'Invited'}
+                    </Txt>
+                  </View>
+                  {f.net === 0 ? (
+                    <Txt tone="ink3" variant="caption" style={{ fontFamily: Font.semibold }}>
+                      settled
+                    </Txt>
+                  ) : (
+                    <BalancePill net={f.net} />
+                  )}
+                </Pressable>
+              );
+              return (
+                <Appear key={f.friendshipId} delay={Math.min(i, 6) * 45}>
+                  {owe ? (
+                    <ReanimatedSwipeable
+                      friction={2}
+                      rightThreshold={40}
+                      overshootRight={false}
+                      childrenContainerStyle={{ backgroundColor: t.surface }}
+                      renderRightActions={() => (
+                        <Pressable
+                          onPress={() =>
+                            router.push(
+                              `/settle?kind=friend&id=${f.friendshipId}&toMemberId=${f.friendMemberId}&amount=${Math.abs(f.net)}&name=${encodeURIComponent(f.displayName)}`,
+                            )
+                          }
+                          style={{ width: 96, backgroundColor: t.accent, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }}
+                        >
+                          <Ionicons name="phone-portrait" size={17} color="#fff" />
+                          <Txt color="#fff" style={{ fontFamily: Font.semibold, fontSize: 13 }}>
+                            Settle
+                          </Txt>
+                        </Pressable>
+                      )}
+                    >
+                      {row}
+                    </ReanimatedSwipeable>
+                  ) : (
+                    row
+                  )}
+                </Appear>
+              );
+            })}
           </Card>
         )}
 

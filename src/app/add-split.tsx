@@ -62,8 +62,23 @@ export default function AddSplit() {
 // ── pick a group or friend to split with ────────────────────────────────────
 function TargetPicker({ onGroup, onFriend }: { onGroup: (id: string) => void; onFriend: (id: string) => void }) {
   const t = useTheme();
+  const router = useRouter();
   const groups = useGroups();
   const friends = useFriends();
+
+  const AddRow = ({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }) => (
+    <Pressable
+      onPress={onPress}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 16, borderWidth: 1.5, borderStyle: 'dashed', borderColor: t.line }}
+    >
+      <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: t.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name={icon} size={20} color={t.accent} />
+      </View>
+      <Txt variant="headline" tone="accent" style={{ flex: 1 }}>
+        {label}
+      </Txt>
+    </Pressable>
+  );
   return (
     <Screen>
       <TopBar title="Split with" />
@@ -82,6 +97,8 @@ function TargetPicker({ onGroup, onFriend }: { onGroup: (id: string) => void; on
             <Ionicons name="chevron-forward" size={18} color={t.ink3} />
           </Card>
         ))}
+        <AddRow icon="add" label="Create a group" onPress={() => router.push('/groups/new')} />
+
         <Txt variant="caption" tone="ink2" style={{ fontFamily: Font.semibold, paddingHorizontal: 4, marginTop: 10 }}>
           Friends
         </Txt>
@@ -94,11 +111,7 @@ function TargetPicker({ onGroup, onFriend }: { onGroup: (id: string) => void; on
             <Ionicons name="chevron-forward" size={18} color={t.ink3} />
           </Card>
         ))}
-        {(groups.data?.items.length ?? 0) === 0 && (friends.data?.friends.length ?? 0) === 0 && (
-          <Txt tone="ink3" variant="caption" center style={{ paddingVertical: 24 }}>
-            Create a group or add a friend first.
-          </Txt>
-        )}
+        <AddRow icon="person-add" label="Add a friend" onPress={() => router.push('/friends/add')} />
       </ScrollView>
     </Screen>
   );

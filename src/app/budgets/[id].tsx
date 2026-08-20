@@ -51,7 +51,7 @@ export default function BudgetDetail() {
               </Txt>
             </ProgressRing>
             <View style={{ marginTop: 16, alignItems: 'center' }}>
-              <MoneyText value={Math.abs(b.remaining)} size={24} weight="bold" color={b.remaining < 0 ? t.danger : t.ink} />
+              <MoneyText value={Math.abs(b.remaining)} size={24} weight="bold" animate color={b.remaining < 0 ? t.danger : t.ink} />
               <Txt tone="ink2" variant="caption" style={{ marginTop: 2 }}>
                 {b.remaining < 0 ? 'over budget this period' : 'remaining this period'}
               </Txt>

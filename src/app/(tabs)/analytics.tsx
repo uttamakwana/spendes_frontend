@@ -73,7 +73,7 @@ export default function AnalyticsTab() {
                   <Txt variant="caption" tone="ink2">
                     Total spent
                   </Txt>
-                  <MoneyText value={expense} size={28} weight="bold" style={{ marginTop: 2 }} />
+                  <MoneyText value={expense} size={28} weight="bold" animate style={{ marginTop: 2 }} />
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Txt variant="caption" tone="ink2">

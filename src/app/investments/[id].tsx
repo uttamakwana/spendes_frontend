@@ -108,7 +108,7 @@ export default function InvestmentDetail() {
               <Txt variant="caption" tone="ink2">
                 Current value
               </Txt>
-              <MoneyText value={inv.currentValue} size={34} weight="bold" style={{ marginTop: 2 }} />
+              <MoneyText value={inv.currentValue} size={34} weight="bold" animate style={{ marginTop: 2 }} />
               <View
                 style={{
                   flexDirection: 'row',

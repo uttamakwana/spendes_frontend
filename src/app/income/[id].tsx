@@ -30,7 +30,7 @@ export default function IncomeDetail() {
             <Txt variant="title3" style={{ marginTop: 14 }}>
               {i.source || i.category}
             </Txt>
-            <MoneyText value={i.amount} sign size={36} color={t.success} style={{ marginTop: 6 }} />
+            <MoneyText value={i.amount} sign size={36} animate color={t.success} style={{ marginTop: 6 }} />
             <Txt tone="ink3" variant="caption" style={{ marginTop: 4 }}>
               {format(new Date(i.receivedAt), 'EEEE, d MMMM · h:mm a')}
             </Txt>

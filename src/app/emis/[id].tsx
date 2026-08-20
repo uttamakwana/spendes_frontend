@@ -54,7 +54,7 @@ export default function EmiDetail() {
               <Txt variant="caption" tone="ink2">
                 {e.frequency === 'monthly' ? 'Monthly payment' : `${e.frequency} payment`}
               </Txt>
-              <MoneyText value={e.amount} size={32} weight="bold" style={{ marginTop: 2 }} />
+              <MoneyText value={e.amount} size={32} weight="bold" animate style={{ marginTop: 2 }} />
               {e.nextDueDate && (
                 <Txt color={e.dueThisMonth ? t.warning : t.ink2} variant="caption" style={{ marginTop: 6, fontWeight: '600' }}>
                   Next due {format(new Date(e.nextDueDate), 'MMM d, yyyy')}

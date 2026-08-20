@@ -36,7 +36,7 @@ export default function TxnDetail() {
             <Txt variant="title3" style={{ marginTop: 14 }}>
               {e.merchant || e.description || e.category}
             </Txt>
-            <MoneyText value={-Math.abs(e.amount)} sign size={36} style={{ marginTop: 6 }} />
+            <MoneyText value={-Math.abs(e.amount)} sign size={36} animate style={{ marginTop: 6 }} />
             <Txt tone="ink3" variant="caption" style={{ marginTop: 4 }}>
               {format(new Date(e.spentAt), 'EEEE, d MMMM · h:mm a')}
             </Txt>

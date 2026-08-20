@@ -10,7 +10,7 @@ import { money } from '@/lib/money';
 import { useRefresh } from '@/lib/useRefresh';
 import { useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
-import { Avatar, Button, Card, Screen, Skeleton, Txt, TopBar } from '@/ui';
+import { Avatar, Button, Card, MoneyText, Screen, Skeleton, Txt, TopBar } from '@/ui';
 
 export default function FriendDetail() {
   const t = useTheme();
@@ -67,9 +67,13 @@ export default function FriendDetail() {
               >
                 <Txt variant="caption" tone="ink2">
                   {settled ? 'You are ' : owed ? `${f.displayName.split(' ')[0]} owes you ` : `You owe ${f.displayName.split(' ')[0]} `}
-                  <Txt color={settled ? t.ink2 : owed ? t.success : t.danger} style={{ fontFamily: Font.bold, fontSize: 16 }}>
-                    {settled ? 'all settled' : money(Math.abs(f.net))}
-                  </Txt>
+                  {settled ? (
+                    <Txt color={t.ink2} style={{ fontFamily: Font.bold, fontSize: 16 }}>
+                      all settled
+                    </Txt>
+                  ) : (
+                    <MoneyText value={Math.abs(f.net)} size={16} weight="bold" color={owed ? t.success : t.danger} animate />
+                  )}
                 </Txt>
               </View>
             </View>

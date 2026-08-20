@@ -78,12 +78,13 @@ export default function GroupDetail() {
             <Txt variant="micro" tone="ink2">
               {myNet === 0 ? 'You are' : myNet > 0 ? 'You are owed' : 'You owe'}
             </Txt>
-            <Txt
-              color={myNet === 0 ? t.ink2 : myNet > 0 ? t.success : t.danger}
-              style={{ fontFamily: Font.bold, fontSize: 18 }}
-            >
-              {myNet === 0 ? 'all settled' : money(Math.abs(myNet))}
-            </Txt>
+            {myNet === 0 ? (
+              <Txt color={t.ink2} style={{ fontFamily: Font.bold, fontSize: 18 }}>
+                all settled
+              </Txt>
+            ) : (
+              <MoneyText value={Math.abs(myNet)} size={18} weight="bold" color={myNet > 0 ? t.success : t.danger} animate />
+            )}
           </View>
           <Button full={false} icon="phone-portrait" onPress={onSettle} disabled={myNet >= 0} style={{ height: 52, paddingHorizontal: 18 }}>
             Settle up

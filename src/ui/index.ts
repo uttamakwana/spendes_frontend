@@ -1,3 +1,4 @@
+export { Appear } from './Appear';
 export { Avatar, AvatarStack, colorOf, initialsOf } from './Avatar';
 export { Button, IconButton } from './Button';
 export { Card } from './Card';
