@@ -40,6 +40,7 @@ export const qk = {
   cashflow: (months: number) => ['analytics', 'cashflow', months] as const,
 
   notifications: (filters?: object) => ['notifications', filters ?? {}] as const,
+  notification: (id: string) => ['notifications', 'detail', id] as const,
   notificationsAll: ['notifications'] as const,
   notificationsUnread: ['notifications', 'unread-count'] as const,
 };

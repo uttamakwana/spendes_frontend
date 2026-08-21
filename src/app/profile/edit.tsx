@@ -83,7 +83,11 @@ export default function ProfileEdit() {
   };
 
   return (
-    <CollapsibleScreen title="Edit profile" contentContainerStyle={{ padding: 16, gap: 14 }}>
+    <CollapsibleScreen
+      title="Edit profile"
+      // Extra bottom room so the last field and Save button clear the keyboard.
+      contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 48 }}
+    >
         {/* profile photo */}
         <View style={{ alignItems: 'center', gap: 8, paddingTop: 4, paddingBottom: 6 }}>
           <Pressable onPress={pickAndUpload} disabled={busy} style={{ width: 96, height: 96 }}>

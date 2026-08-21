@@ -49,12 +49,15 @@ export function TxnRow({
   onPress,
   last,
   onDelete,
+  onLongPress,
 }: {
   item: TxnItem;
   onPress?: () => void;
   last?: boolean;
   /** When set, the row can be swiped left to reveal a Delete action. */
   onDelete?: () => void;
+  /** Long-press to open a context menu (e.g. Edit / Delete). */
+  onLongPress?: () => void;
 }) {
   const t = useTheme();
   const reduce = useReducedMotion();
@@ -63,6 +66,7 @@ export function TxnRow({
   const row = (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
       style={({ pressed }) => ({
         flexDirection: 'row',
         alignItems: 'center',

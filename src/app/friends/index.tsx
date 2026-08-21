@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useRef } from 'react';
 import { Pressable, View } from 'react-native';
-import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import ReanimatedSwipeable, {
+  type SwipeableMethods,
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { useFriends } from '@/features/hooks';
 import { useRefresh } from '@/lib/useRefresh';
@@ -17,12 +19,24 @@ export default function Friends() {
   const friends = data?.friends ?? [];
   const { refreshing, onRefresh } = useRefresh([{ refetch }]);
 
+  // A swiped-open row is a transient gesture state, not a selection: at most one
+  // may be open, and it must never still be hanging open when you come back from
+  // the settle screen. Closing on blur covers navigation, tab switches and
+  // backgrounding in one place.
+  const openRow = useRef<SwipeableMethods | null>(null);
+  const closeOpenRow = useCallback(() => {
+    openRow.current?.close();
+    openRow.current = null;
+  }, []);
+  useFocusEffect(useCallback(() => closeOpenRow, [closeOpenRow]));
+
   return (
     <CollapsibleScreen
       title="Friends"
       right={<IconButton name="person-add" bg={t.accent} color="#fff" onPress={() => router.push('/friends/add')} />}
       refreshing={refreshing}
       onRefresh={onRefresh}
+      onScrollBeginDrag={closeOpenRow}
       contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
     >
         {/* summary */}
@@ -61,7 +75,10 @@ export default function Friends() {
               const owe = f.net < 0;
               const row = (
                 <Pressable
-                  onPress={() => router.push(`/friends/${f.friendshipId}`)}
+                  onPress={() => {
+                    closeOpenRow();
+                    router.push(`/friends/${f.friendshipId}`);
+                  }}
                   style={({ pressed }) => ({
                     flexDirection: 'row',
                     alignItems: 'center',
@@ -77,8 +94,19 @@ export default function Friends() {
                     <Txt variant="headline" numberOfLines={1}>
                       {f.displayName}
                     </Txt>
-                    <Txt tone="ink3" variant="caption">
-                      {f.isRegistered ? 'On Spendes' : 'Invited'}
+                    <Txt
+                      tone={f.needsMyReview ? undefined : 'ink3'}
+                      color={f.needsMyReview ? t.warning : undefined}
+                      variant="caption"
+                      style={f.needsMyReview ? { fontFamily: Font.semibold } : undefined}
+                    >
+                      {/* They added you and you haven't answered — say so rather than
+                          listing them as an established friend. */}
+                      {f.needsMyReview
+                        ? 'Added you · tap to review'
+                        : f.isRegistered
+                          ? 'On Spendes'
+                          : 'Invited'}
                     </Txt>
                   </View>
                   {f.net === 0 ? (
@@ -93,29 +121,16 @@ export default function Friends() {
               return (
                 <Appear key={f.friendshipId} delay={Math.min(i, 6) * 45}>
                   {owe ? (
-                    <ReanimatedSwipeable
-                      friction={2}
-                      rightThreshold={40}
-                      overshootRight={false}
-                      childrenContainerStyle={{ backgroundColor: t.surface }}
-                      renderRightActions={() => (
-                        <Pressable
-                          onPress={() =>
-                            router.push(
-                              `/settle?kind=friend&id=${f.friendshipId}&toMemberId=${f.friendMemberId}&amount=${Math.abs(f.net)}&name=${encodeURIComponent(f.displayName)}`,
-                            )
-                          }
-                          style={{ width: 96, backgroundColor: t.accent, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }}
-                        >
-                          <Ionicons name="phone-portrait" size={17} color="#fff" />
-                          <Txt color="#fff" style={{ fontFamily: Font.semibold, fontSize: 13 }}>
-                            Settle
-                          </Txt>
-                        </Pressable>
-                      )}
+                    <SettleRow
+                      openRow={openRow}
+                      onSettle={() =>
+                        router.push(
+                          `/settle?kind=friend&id=${f.friendshipId}&toMemberId=${f.friendMemberId}&amount=${Math.abs(f.net)}&name=${encodeURIComponent(f.displayName)}`,
+                        )
+                      }
                     >
                       {row}
-                    </ReanimatedSwipeable>
+                    </SettleRow>
                   ) : (
                     row
                   )}
@@ -154,5 +169,66 @@ export default function Friends() {
           </Pressable>
         )}
     </CollapsibleScreen>
+  );
+}
+
+/**
+ * A friend row you can swipe left to settle. It owns its swipe controller and
+ * reports itself to the list's shared `openRow`, so opening one closes any other
+ * and taking the action closes this one before we navigate — a row left hanging
+ * open after a round trip to the settle screen reads as broken.
+ */
+function SettleRow({
+  openRow,
+  onSettle,
+  children,
+}: {
+  openRow: React.RefObject<SwipeableMethods | null>;
+  onSettle: () => void;
+  children: React.ReactNode;
+}) {
+  const t = useTheme();
+  const ref = useRef<SwipeableMethods | null>(null);
+
+  return (
+    <ReanimatedSwipeable
+      ref={ref}
+      friction={2}
+      rightThreshold={40}
+      overshootRight={false}
+      childrenContainerStyle={{ backgroundColor: t.surface }}
+      onSwipeableWillOpen={() => {
+        if (openRow.current && openRow.current !== ref.current) openRow.current.close();
+        openRow.current = ref.current;
+      }}
+      onSwipeableWillClose={() => {
+        if (openRow.current === ref.current) openRow.current = null;
+      }}
+      renderRightActions={(_progress, _translation, methods) => (
+        <Pressable
+          onPress={() => {
+            // Close first: the row must be back to normal when we return.
+            methods.close();
+            openRow.current = null;
+            onSettle();
+          }}
+          style={{
+            width: 96,
+            backgroundColor: t.accent,
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'row',
+            gap: 6,
+          }}
+        >
+          <Ionicons name="phone-portrait" size={17} color="#fff" />
+          <Txt color="#fff" style={{ fontFamily: Font.semibold, fontSize: 13 }}>
+            Settle
+          </Txt>
+        </Pressable>
+      )}
+    >
+      {children}
+    </ReanimatedSwipeable>
   );
 }

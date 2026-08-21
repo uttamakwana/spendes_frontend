@@ -25,6 +25,7 @@ export function CollapsibleScreen({
   background,
   refreshing,
   onRefresh,
+  onScrollBeginDrag,
 }: {
   title: string;
   subtitle?: string;
@@ -37,6 +38,8 @@ export function CollapsibleScreen({
   /** Enables pull-to-refresh — pair with `useRefresh`. */
   refreshing?: boolean;
   onRefresh?: () => void;
+  /** Fires when the user starts dragging — e.g. to dismiss an open swipe row. */
+  onScrollBeginDrag?: () => void;
 }) {
   const t = useTheme();
   const router = useRouter();
@@ -64,7 +67,13 @@ export function CollapsibleScreen({
         scrollEventThrottle={16}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
+        // Lifts the content by the keyboard's height on iOS, so a field near the
+        // bottom of a form (the UPI id on Edit profile, say) isn't left underneath
+        // it. Android resizes the window instead (`softwareKeyboardLayoutMode`
+        // defaults to "resize") and scrolls the focused input into view natively.
+        automaticallyAdjustKeyboardInsets
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+        onScrollBeginDrag={onScrollBeginDrag}
         contentInsetAdjustmentBehavior="never"
         contentInset={isIOS ? { top: navH } : undefined}
         contentOffset={isIOS ? { x: 0, y: -navH } : undefined}

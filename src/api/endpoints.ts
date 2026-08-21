@@ -9,6 +9,7 @@ import type {
   BudgetPeriod,
   Cashflow,
   Category,
+  DisputeReason,
   Emi,
   EmiSummary,
   Expense,
@@ -22,6 +23,7 @@ import type {
   Income,
   IncomeSummary,
   Investment,
+  NotificationDetail,
   NotificationPreferences,
   OtpRequestResult,
   Paginated,
@@ -47,6 +49,8 @@ export const authApi = {
     lastName: string;
     email?: string;
     defaultCurrency?: string;
+    /** Optional at sign-up — friends can settle up with them from day one. */
+    upiId?: string;
     otp: string;
   }) => post<AuthResult>('/auth/register', body),
   login: (body: { dialCode?: string; phoneNumber: string; otp: string }) =>
@@ -200,6 +204,11 @@ export const friendsApi = {
   list: () => get<FriendsResponse>('/friends'),
   get: (friendshipId: string) => get<Friend>(`/friends/${friendshipId}`),
   add: (body: MemberInput) => post<Friend>('/friends', body),
+  /** "Looks right" — makes a friendship someone else started mutual. */
+  confirm: (friendshipId: string) => post<Friend>(`/friends/${friendshipId}/confirm`),
+  /** "I don't recognise this person" — tells them; deletes nothing. */
+  decline: (friendshipId: string, body?: { note?: string }) =>
+    post<Friend>(`/friends/${friendshipId}/decline`, body ?? {}),
   listExpenses: (friendshipId: string, page = 1, limit = 30) =>
     get<Paginated<GroupExpense>>(`/friends/${friendshipId}/expenses`, { page, limit }),
   createExpense: (friendshipId: string, body: CreateSplitBody) =>
@@ -338,5 +347,10 @@ export const notificationsApi = {
   unreadCount: () => get<{ count: number }>('/notifications/unread-count'),
   markRead: (id: string) => patch<AppNotification>(`/notifications/${id}/read`, {}),
   markAllRead: () => post<{ updated: number }>('/notifications/read-all'),
-  dispute: (id: string) => post<AppNotification>(`/notifications/${id}/dispute`),
+  /** The review screen's single request: the item plus who/what/how much and the legal actions. */
+  detail: (id: string) => get<NotificationDetail>(`/notifications/${id}`),
+  /** "Looks right" — accepts this item and the connection behind it. */
+  confirm: (id: string) => post<AppNotification>(`/notifications/${id}/confirm`),
+  dispute: (id: string, body?: { reason?: DisputeReason; note?: string }) =>
+    post<AppNotification>(`/notifications/${id}/dispute`, body ?? {}),
 };

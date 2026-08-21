@@ -7,7 +7,11 @@ import { AppState, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { errorMessage, friendsApi, splitsApi } from '@/api';
-import { useRecordFriendSettlement, useRecordGroupSettlement } from '@/features/hooks';
+import {
+  useConfirmNotification,
+  useRecordFriendSettlement,
+  useRecordGroupSettlement,
+} from '@/features/hooks';
 import { money } from '@/lib/money';
 import { useTheme } from '@/theme';
 import { Font, tabularNums } from '@/theme/fonts';
@@ -24,6 +28,8 @@ export default function Settle() {
     amount?: string;
     name?: string;
     incoming?: string;
+    /** Set when we arrived from a split request — paying it is also confirming it. */
+    notificationId?: string;
   }>();
 
   const isFriend = params.kind === 'friend';
@@ -46,6 +52,7 @@ export default function Settle() {
   const recordGroup = useRecordGroupSettlement(id);
   const recordFriend = useRecordFriendSettlement(id);
   const record = isFriend ? recordFriend : recordGroup;
+  const confirmRequest = useConfirmNotification();
 
   const intent = useMutation({
     mutationFn: () =>
@@ -94,7 +101,17 @@ export default function Settle() {
     awaitingReturn.current = false;
     record.mutate(
       { toMemberId, fromMemberId, amount, method: 'upi', reference },
-      { onSuccess: () => setStage('done'), onError: (e) => setError(errorMessage(e)) },
+      {
+        onSuccess: () => {
+          // Settling a request answers it: nobody should be asked "is this right?"
+          // about a bill they just paid. Best-effort — the payment is what matters.
+          if (params.notificationId) {
+            confirmRequest.mutate(params.notificationId, { onError: () => {} });
+          }
+          setStage('done');
+        },
+        onError: (e) => setError(errorMessage(e)),
+      },
     );
   };
 

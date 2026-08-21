@@ -2,12 +2,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import type { AppNotification, NotificationType } from '@/api';
-import { errorMessage } from '@/api';
 import {
-  useDisputeNotification,
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useNotifications,
@@ -25,48 +23,36 @@ const STYLE: Record<NotificationType, { icon: IconName; color: string }> = {
   settlement_recorded: { icon: 'checkmark-done', color: '#16A34A' },
   split_disputed: { icon: 'flag', color: '#DC2626' },
   membership_inherited: { icon: 'people', color: '#D97706' },
+  connection_confirmed: { icon: 'checkmark-circle', color: '#16A34A' },
+  connection_declined: { icon: 'alert-circle', color: '#DC2626' },
 };
 
 export default function NotificationsInbox() {
   const t = useTheme();
   const router = useRouter();
-  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage, refetch } = useNotifications();
+  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage, refetch } =
+    useNotifications();
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
-  const dispute = useDisputeNotification();
   const { refreshing, onRefresh } = useRefresh([{ refetch }]);
 
   const items = data?.pages.flatMap((p) => p.items) ?? [];
   const unread = items.some((n) => !n.isRead);
 
-  const openTarget = (n: AppNotification) => {
+  /**
+   * Anything that asks something of you opens the review screen, where the whole
+   * picture is — who this is, what they're claiming, and every answer you can give.
+   * Items that are purely informational still jump straight to the group/friend.
+   */
+  const open = (n: AppNotification) => {
+    if (n.canConfirm || n.canDispute) {
+      router.push(`/notifications/${n.id}`);
+      return;
+    }
     if (!n.isRead) markRead.mutate(n.id);
     if (n.groupId) {
       router.push(n.isDirect ? `/friends/${n.groupId}` : `/groups/${n.groupId}`);
     }
-  };
-
-  const onDispute = (n: AppNotification) => {
-    Alert.alert(
-      'Flag this as wrong?',
-      'We’ll let the person who added it know so they can correct or remove it. Flagging is a heads-up — it doesn’t delete the split or change the amount on its own.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Flag it',
-          style: 'destructive',
-          onPress: () =>
-            dispute.mutate(n.id, {
-              onSuccess: () =>
-                Alert.alert(
-                  'Flagged ✓',
-                  'We’ve let them know so they can review it. The amount stays until they correct or remove the split.',
-                ),
-              onError: (e) => Alert.alert('Couldn’t flag', errorMessage(e)),
-            }),
-        },
-      ],
-    );
   };
 
   return (
@@ -101,14 +87,7 @@ export default function NotificationsInbox() {
         <>
           <Card padding={0} style={{ paddingHorizontal: 14 }}>
             {items.map((n, i) => (
-              <Row
-                key={n.id}
-                n={n}
-                last={i === items.length - 1}
-                onPress={() => openTarget(n)}
-                onDispute={() => onDispute(n)}
-                disputing={dispute.isPending && dispute.variables === n.id}
-              />
+              <Row key={n.id} n={n} last={i === items.length - 1} onPress={() => open(n)} />
             ))}
           </Card>
 
@@ -128,19 +107,7 @@ export default function NotificationsInbox() {
   );
 }
 
-function Row({
-  n,
-  last,
-  onPress,
-  onDispute,
-  disputing,
-}: {
-  n: AppNotification;
-  last: boolean;
-  onPress: () => void;
-  onDispute: () => void;
-  disputing: boolean;
-}) {
+function Row({ n, last, onPress }: { n: AppNotification; last: boolean; onPress: () => void }) {
   const t = useTheme();
   const s = STYLE[n.type] ?? STYLE.split_added;
   const when = (() => {
@@ -178,35 +145,71 @@ function Row({
 
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Txt style={{ flex: 1, fontFamily: n.isRead ? Font.medium : Font.semibold }} numberOfLines={1}>
+          <Txt
+            style={{ flex: 1, fontFamily: n.isRead ? Font.medium : Font.semibold }}
+            numberOfLines={1}
+          >
             {n.title}
           </Txt>
-          {!n.isRead && <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: t.accent }} />}
+          {!n.isRead && (
+            <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: t.accent }} />
+          )}
         </View>
         <Txt tone="ink2" variant="caption" style={{ marginTop: 2, lineHeight: 18 }}>
           {n.body}
         </Txt>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 6 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 }}>
           <Txt tone="ink3" variant="micro">
             {when}
           </Txt>
-          {n.isDisputed ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Ionicons name="flag" size={12} color={t.danger} />
-              <Txt color={t.danger} variant="micro" style={{ fontFamily: Font.semibold }}>
-                Flagged
-              </Txt>
-            </View>
-          ) : n.canDispute ? (
-            <Pressable onPress={onDispute} hitSlop={6} disabled={disputing}>
-              <Txt color={t.danger} variant="micro" style={{ fontFamily: Font.semibold }}>
-                {disputing ? 'Flagging…' : 'This isn’t right'}
-              </Txt>
-            </Pressable>
-          ) : null}
+          <State n={n} />
         </View>
       </View>
     </Pressable>
+  );
+}
+
+/** Where this item stands: still open, confirmed, or flagged. */
+function State({ n }: { n: AppNotification }) {
+  const t = useTheme();
+
+  if (n.isDisputed) {
+    return <Tag icon="flag" label="Flagged" color={t.danger} />;
+  }
+  if (n.isConfirmed) {
+    return <Tag icon="checkmark-circle" label="Confirmed" color={t.success} />;
+  }
+  if (n.needsReview) {
+    return (
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 4,
+          backgroundColor: t.accentSoft,
+          paddingHorizontal: 8,
+          paddingVertical: 2,
+          borderRadius: 999,
+        }}
+      >
+        <Txt color={t.accent} variant="micro" style={{ fontFamily: Font.semibold }}>
+          Review
+        </Txt>
+        <Ionicons name="chevron-forward" size={11} color={t.accent} />
+      </View>
+    );
+  }
+  return null;
+}
+
+function Tag({ icon, label, color }: { icon: IconName; label: string; color: string }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+      <Ionicons name={icon} size={12} color={color} />
+      <Txt color={color} variant="micro" style={{ fontFamily: Font.semibold }}>
+        {label}
+      </Txt>
+    </View>
   );
 }

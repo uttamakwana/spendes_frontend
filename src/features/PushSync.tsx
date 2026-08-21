@@ -61,8 +61,15 @@ export function PushSync() {
   // Flush the captured deep link once authenticated (and past the auth gate).
   useEffect(() => {
     if (status !== 'authed' || !pending) return;
+    const notificationId =
+      typeof pending.notificationId === 'string' ? pending.notificationId : undefined;
     const groupId = typeof pending.groupId === 'string' ? pending.groupId : undefined;
-    if (groupId) {
+
+    // A push about a split request should land on the request itself — that screen
+    // decides whether there's anything to answer and shows the group otherwise.
+    if (notificationId) {
+      router.push(`/notifications/${notificationId}`);
+    } else if (groupId) {
       router.push(pending.isDirect ? `/friends/${groupId}` : `/groups/${groupId}`);
     } else {
       router.push('/notifications');

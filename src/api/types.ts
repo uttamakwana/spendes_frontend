@@ -264,6 +264,13 @@ export interface Friend {
   phoneNumber?: string;
   currency: string;
   net: number;
+  /** Your answer to "they added you" — `pending` means it's still unanswered. */
+  consent: MemberConsent;
+  /** Their side of the same question. */
+  theirConsent: MemberConsent;
+  addedByMe: boolean;
+  /** They added you and you haven't answered yet. */
+  needsMyReview: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -439,7 +446,17 @@ export type NotificationType =
   | 'split_added'
   | 'settlement_recorded'
   | 'split_disputed'
-  | 'membership_inherited';
+  | 'membership_inherited'
+  | 'connection_confirmed'
+  | 'connection_declined';
+
+/** Why someone flagged a split/connection. `dont_know_them` also declines the connection. */
+export type DisputeReason =
+  | 'not_mine'
+  | 'wrong_amount'
+  | 'already_paid'
+  | 'dont_know_them'
+  | 'other';
 
 export interface AppNotification {
   id: string;
@@ -455,8 +472,73 @@ export interface AppNotification {
   amount?: number;
   currency?: string;
   isRead: boolean;
+  isConfirmed: boolean;
   isDisputed: boolean;
-  /** Whether the recipient can still flag this as wrong. */
+  disputeReason?: DisputeReason;
+  disputeNote?: string;
+  /** This item still asks something of you — drives the "Review" cue in the inbox. */
+  needsReview: boolean;
+  /** Whether you can still answer "looks right". */
+  canConfirm: boolean;
+  /** Whether you can still flag this as wrong. */
   canDispute: boolean;
   createdAt: string;
+}
+
+/** Your own answer to "someone added you here" — never a gate, just a state. */
+export type MemberConsent = 'confirmed' | 'pending' | 'declined';
+
+/** Everything the review screen shows about one notification (`GET /notifications/:id`). */
+export interface NotificationDetail extends AppNotification {
+  actor?: {
+    userId?: string;
+    name: string;
+    avatarUrl?: string;
+    dialCode?: string;
+    phoneNumber?: string;
+    isRegistered: boolean;
+  };
+  connection?: {
+    id: string;
+    isDirect: boolean;
+    name: string;
+    consent: MemberConsent;
+    /** True when someone else created this connection — i.e. it arrived unasked-for. */
+    addedByThem: boolean;
+    memberCount: number;
+    myMemberId?: string;
+    otherMemberId?: string;
+    createdAt: string;
+  };
+  expense?: {
+    id: string;
+    description: string;
+    /** The whole bill. */
+    amount: number;
+    currency: string;
+    /** Your slice of it — the number you're actually being asked about. */
+    myShare: number;
+    paidByName: string;
+    splitStrategy: SplitStrategy;
+    splitCount: number;
+    category?: string;
+    notes?: string;
+    spentAt: string;
+  };
+  balance?: {
+    /** Positive = you're owed; negative = you owe. */
+    myNet: number;
+    currency: string;
+  };
+  /** Decided server-side, so a button is never offered when it would fail. */
+  actions: {
+    canConfirm: boolean;
+    canDispute: boolean;
+    canPay: boolean;
+    canMarkPaid: boolean;
+    payAmount: number;
+    payeeMemberId?: string;
+    payerMemberId?: string;
+    payBlockedReason?: string;
+  };
 }

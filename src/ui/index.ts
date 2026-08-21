@@ -1,3 +1,5 @@
+export { ActionMenu } from './ActionMenu';
+export type { MenuAction } from './ActionMenu';
 export { Appear } from './Appear';
 export { Avatar, AvatarStack, colorOf, initialsOf } from './Avatar';
 export { Button, IconButton } from './Button';

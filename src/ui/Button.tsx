@@ -23,6 +23,21 @@ export interface ButtonProps {
   style?: StyleProp<ViewStyle>;
 }
 
+/**
+ * Whether the children are pure text and therefore need a `<Text>` around them.
+ *
+ * `<Button>Pay {money(x)} via UPI</Button>` arrives as an *array* of strings, not
+ * one string — so a plain `typeof children === 'string'` check misses it and React
+ * Native throws "Text strings must be rendered within a <Text> component". Testing
+ * every child covers both spellings.
+ */
+function isTextual(children: React.ReactNode): boolean {
+  const parts = React.Children.toArray(children);
+  return (
+    parts.length > 0 && parts.every((c) => typeof c === 'string' || typeof c === 'number')
+  );
+}
+
 export function Button({
   children,
   onPress,
@@ -84,7 +99,7 @@ export function Button({
       ) : (
         <>
           {icon && <Ionicons name={icon} size={19} color={p.fg} />}
-          {typeof children === 'string' ? (
+          {isTextual(children) ? (
             <Txt color={p.fg} style={{ fontFamily: Font.semibold, fontSize }}>
               {children}
             </Txt>

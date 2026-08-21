@@ -16,6 +16,7 @@ import {
   CreateIncomeBody,
   CreateInvestmentBody,
   CreateSplitBody,
+  DisputeReason,
   emisApi,
   expensesApi,
   ExpenseFilters,
@@ -81,12 +82,41 @@ export function useMarkAllNotificationsRead() {
   });
 }
 
+/** One notification with everything the review screen needs (opening it also marks it read). */
+export const useNotification = (id: string) =>
+  useQuery({
+    queryKey: qk.notification(id),
+    queryFn: () => notificationsApi.detail(id),
+    enabled: Boolean(id),
+  });
+
+/**
+ * "Looks right" — accepts the split *and* the connection behind it, which is what
+ * makes a friendship someone else started mutual. Friends/groups are invalidated
+ * too because the pending state disappears from those lists.
+ */
+export function useConfirmNotification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => notificationsApi.confirm(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: qk.notificationsAll });
+      qc.invalidateQueries({ queryKey: qk.notification(id) });
+      qc.invalidateQueries({ queryKey: qk.friends });
+      qc.invalidateQueries({ queryKey: qk.groups });
+    },
+  });
+}
+
 export function useDisputeNotification() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => notificationsApi.dispute(id),
-    onSuccess: () => {
+    mutationFn: ({ id, reason, note }: { id: string; reason?: DisputeReason; note?: string }) =>
+      notificationsApi.dispute(id, { reason, note }),
+    onSuccess: (_data, { id }) => {
       qc.invalidateQueries({ queryKey: qk.notificationsAll });
+      qc.invalidateQueries({ queryKey: qk.notification(id) });
+      qc.invalidateQueries({ queryKey: qk.friends });
     },
   });
 }
@@ -360,6 +390,30 @@ export function useAddFriend() {
   return useWriteMutation({
     mutationFn: (b: MemberInput) => friendsApi.add(b),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.friends }),
+  });
+}
+/** Accept a friendship someone else started — the same answer the inbox's "Looks right" gives. */
+export function useConfirmFriend(friendshipId: string) {
+  const qc = useQueryClient();
+  return useWriteMutation({
+    mutationFn: () => friendsApi.confirm(friendshipId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.friend(friendshipId) });
+      qc.invalidateQueries({ queryKey: qk.friends });
+      qc.invalidateQueries({ queryKey: qk.notificationsAll });
+    },
+  });
+}
+/** "I don't recognise this person" — non-blocking, and it deletes nothing. */
+export function useDeclineFriend(friendshipId: string) {
+  const qc = useQueryClient();
+  return useWriteMutation({
+    mutationFn: (b: { note?: string } = {}) => friendsApi.decline(friendshipId, b),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.friend(friendshipId) });
+      qc.invalidateQueries({ queryKey: qk.friends });
+      qc.invalidateQueries({ queryKey: qk.notificationsAll });
+    },
   });
 }
 export function useCreateGroupSplit(groupId: string) {

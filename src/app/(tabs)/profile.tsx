@@ -5,16 +5,15 @@ import { Alert, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/auth/AuthProvider';
-import { ACCENTS, hexA, useTheme, useThemeControls } from '@/theme';
+import { ACCENT_LABELS, hexA, useTheme, useThemeControls } from '@/theme';
 import { Font } from '@/theme/fonts';
 import { Avatar, CollapsibleScreen, IconButton, Txt } from '@/ui';
 
 export default function ProfileTab() {
-  const t = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
-  const { appearance, setAppearance, accent, setAccent } = useThemeControls();
+  const { appearance, accent } = useThemeControls();
 
   const confirmLogout = () => {
     Alert.alert('Log out?', 'You can sign back in anytime with your phone number.', [
@@ -49,6 +48,7 @@ export default function ProfileTab() {
           Spendes Pro upsell — temporarily hidden until the Pro plan ships (billing via
           store in-app purchases). Re-enable this block once entitlements + subscriptions
           are implemented; the card itself is intentionally kept here for that work.
+          (It needs `const t = useTheme()` back in this component for the tints below.)
 
           <View style={{ backgroundColor: t.premium, borderRadius: 18, padding: 18, marginBottom: 16, overflow: 'hidden' }}>
             <View
@@ -103,63 +103,17 @@ export default function ProfileTab() {
           />
         </Group>
 
-        {/* appearance */}
-        <View style={{ backgroundColor: t.surface, borderRadius: 16, borderWidth: 1, borderColor: t.hair, padding: 16, marginBottom: 14 }}>
-          <Txt variant="caption" tone="ink2">
-            Appearance
-          </Txt>
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
-            {(['system', 'light', 'dark'] as const).map((a) => {
-              const on = appearance === a;
-              return (
-                <Pressable
-                  key={a}
-                  onPress={() => setAppearance(a)}
-                  style={{
-                    flex: 1,
-                    paddingVertical: 9,
-                    borderRadius: 10,
-                    alignItems: 'center',
-                    backgroundColor: on ? t.accentSoft : t.fill,
-                    borderWidth: 1,
-                    borderColor: on ? hexA(t.accent, 0.3) : 'transparent',
-                  }}
-                >
-                  <Txt color={on ? t.accent : t.ink2} style={{ fontFamily: Font.semibold, fontSize: 13, textTransform: 'capitalize' }}>
-                    {a}
-                  </Txt>
-                </Pressable>
-              );
-            })}
-          </View>
-          <Txt variant="caption" tone="ink2" style={{ marginTop: 16 }}>
-            Brand accent
-          </Txt>
-          <View style={{ flexDirection: 'row', gap: 12, marginTop: 10 }}>
-            {ACCENTS.map((c) => {
-              const on = accent === c;
-              return (
-                <Pressable
-                  key={c}
-                  onPress={() => setAccent(c)}
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 999,
-                    backgroundColor: c,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderWidth: on ? 2.5 : 0,
-                    borderColor: t.canvas,
-                    ...(on ? t.shadow : {}),
-                  }}
-                >
-                  {on && <Ionicons name="checkmark" size={18} color="#fff" />}
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
+        {/* appearance — the controls live on their own screen; this is the section */}
+        <Group>
+          <Row
+            icon="color-palette-outline"
+            color="#7C3AED"
+            label="Appearance"
+            detail={appearanceLabel(appearance, accent)}
+            onPress={() => router.push('/settings/appearance')}
+            last
+          />
+        </Group>
 
         <Group>
           <Row icon="notifications-outline" color="#2563EB" label="Notifications" onPress={() => router.push('/settings/notifications')} />
@@ -176,6 +130,13 @@ export default function ProfileTab() {
         </Txt>
     </CollapsibleScreen>
   );
+}
+
+/** "System · Indigo" — enough to see the current setting without opening it. */
+function appearanceLabel(appearance: string, accent: string): string {
+  const mode = appearance === 'system' ? 'System' : appearance === 'dark' ? 'Dark' : 'Light';
+  const color = ACCENT_LABELS[accent];
+  return color ? `${mode} · ${color}` : mode;
 }
 
 function Group({ children }: { children: React.ReactNode }) {

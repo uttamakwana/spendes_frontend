@@ -1,17 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
+import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { format, isToday, isYesterday } from 'date-fns';
-import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, TextInput, View } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, TextInput, View } from 'react-native';
 
 import type { Expense } from '@/api';
 import { useDeleteExpense, useExpenses } from '@/features/hooks';
 import { expenseToItem, TxnRow } from '@/features/transactions/TxnRow';
+import { haptics } from '@/lib/haptics';
 import { money } from '@/lib/money';
 import { useRefresh } from '@/lib/useRefresh';
 import { useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
-import { Button, Card, CollapsibleScreen, EmptyState, IconButton, Skeleton, Txt } from '@/ui';
+import { ActionMenu, Card, EmptyState, IconButton, Screen, Skeleton, TopBar, Txt } from '@/ui';
 
 const FILTERS = ['all', 'upi', 'card', 'cash'] as const;
 
@@ -21,6 +23,8 @@ function dateLabel(d: string) {
   if (isYesterday(date)) return 'Yesterday';
   return format(date, 'EEE, d MMM');
 }
+
+type DayGroup = [string, Expense[]];
 
 export default function Transactions() {
   const t = useTheme();
@@ -41,14 +45,18 @@ export default function Transactions() {
   const items: Expense[] = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data]);
   const { refreshing, onRefresh } = useRefresh([{ refetch }]);
   const del = useDeleteExpense();
+  const [menuFor, setMenuFor] = useState<Expense | null>(null);
 
-  const confirmDelete = (id: string) =>
-    Alert.alert('Delete transaction?', 'This permanently removes it.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => del.mutate(id) },
-    ]);
+  const confirmDelete = useCallback(
+    (id: string) =>
+      Alert.alert('Delete transaction?', 'This permanently removes it.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => del.mutate(id) },
+      ]),
+    [del],
+  );
 
-  const groups = useMemo(() => {
+  const groups: DayGroup[] = useMemo(() => {
     const map: Record<string, Expense[]> = {};
     items.forEach((e) => {
       const key = e.spentAt.slice(0, 10);
@@ -57,15 +65,50 @@ export default function Transactions() {
     return Object.entries(map).sort((a, b) => (a[0] < b[0] ? 1 : -1));
   }, [items]);
 
+  const renderDay = useCallback(
+    ({ item }: { item: DayGroup }) => {
+      const [date, txns] = item;
+      const dayTotal = txns.reduce((s, e) => s + Math.abs(e.amount), 0);
+      return (
+        <View style={{ marginTop: 8 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, paddingVertical: 6 }}>
+            <Txt variant="caption" style={{ fontFamily: Font.semibold }} tone="ink2">
+              {dateLabel(date)}
+            </Txt>
+            <Txt tone="ink3" variant="caption" style={{ fontFamily: Font.semibold }}>
+              −{money(dayTotal)}
+            </Txt>
+          </View>
+          <Card padding={0} style={{ paddingHorizontal: 14 }}>
+            {txns.map((e, i) => (
+              <TxnRow
+                key={e.id}
+                item={expenseToItem(e)}
+                last={i === txns.length - 1}
+                onPress={() => router.push(`/transactions/${e.id}`)}
+                onDelete={() => confirmDelete(e.id)}
+                onLongPress={() => {
+                  haptics.medium();
+                  setMenuFor(e);
+                }}
+              />
+            ))}
+          </Card>
+        </View>
+      );
+    },
+    [router, confirmDelete],
+  );
+
   return (
-    <CollapsibleScreen
-      title="Transactions"
-      right={<IconButton name="arrow-down-circle-outline" onPress={() => router.push('/income')} />}
-      refreshing={refreshing}
-      onRefresh={onRefresh}
-      contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
-    >
-        {/* search */}
+    <Screen>
+      <TopBar title="" right={<IconButton name="arrow-down-circle-outline" onPress={() => router.push('/income')} />} />
+
+      {/* fixed header: title + search + filters */}
+      <View style={{ paddingHorizontal: 16 }}>
+        <Txt variant="title1" style={{ paddingHorizontal: 4, paddingBottom: 10 }}>
+          Transactions
+        </Txt>
         <View
           style={{
             flexDirection: 'row',
@@ -89,80 +132,98 @@ export default function Transactions() {
             style={{ flex: 1, fontFamily: Font.regular, fontSize: 15, color: t.ink }}
           />
         </View>
-
-        {/* filter chips */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 8 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 8 }}>
           {FILTERS.map((f) => {
             const on = method === f;
             return (
-              <View key={f}>
-                <Txt
-                  onPress={() => setMethod(f)}
-                  color={on ? t.canvas : t.ink2}
-                  style={{
-                    fontFamily: Font.semibold,
-                    fontSize: 13.5,
-                    overflow: 'hidden',
-                    paddingHorizontal: 14,
-                    paddingVertical: 7,
-                    borderRadius: 999,
-                    backgroundColor: on ? t.ink : t.surface,
-                    borderWidth: 1,
-                    borderColor: on ? t.ink : t.line,
-                    textTransform: 'capitalize',
-                  }}
-                >
-                  {f}
-                </Txt>
-              </View>
+              <Txt
+                key={f}
+                onPress={() => setMethod(f)}
+                color={on ? t.canvas : t.ink2}
+                style={{
+                  fontFamily: Font.semibold,
+                  fontSize: 13.5,
+                  overflow: 'hidden',
+                  paddingHorizontal: 14,
+                  paddingVertical: 7,
+                  borderRadius: 999,
+                  backgroundColor: on ? t.ink : t.surface,
+                  borderWidth: 1,
+                  borderColor: on ? t.ink : t.line,
+                  textTransform: 'capitalize',
+                }}
+              >
+                {f}
+              </Txt>
             );
           })}
         </ScrollView>
+      </View>
 
-        {isLoading ? (
-          <View style={{ gap: 10, marginTop: 8 }}>
-            {[0, 1, 2, 3].map((i) => (
-              <Skeleton key={i} height={60} radius={14} />
-            ))}
-          </View>
-        ) : groups.length === 0 ? (
-          <EmptyState icon="search" title="No transactions" subtitle="Try a different search or filter." />
-        ) : (
-          groups.map(([date, txns]) => {
-            const dayTotal = txns.reduce((s, e) => s + Math.abs(e.amount), 0);
-            return (
-              <View key={date} style={{ marginTop: 8 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, paddingVertical: 6 }}>
-                  <Txt variant="caption" style={{ fontFamily: Font.semibold }} tone="ink2">
-                    {dateLabel(date)}
-                  </Txt>
-                  <Txt tone="ink3" variant="caption" style={{ fontFamily: Font.semibold }}>
-                    −{money(dayTotal)}
-                  </Txt>
-                </View>
-                <Card padding={0} style={{ paddingHorizontal: 14 }}>
-                  {txns.map((e, i) => (
-                    <TxnRow
-                      key={e.id}
-                      item={expenseToItem(e)}
-                      last={i === txns.length - 1}
-                      onPress={() => router.push(`/transactions/${e.id}`)}
-                      onDelete={() => confirmDelete(e.id)}
-                    />
-                  ))}
-                </Card>
+      <View style={{ flex: 1 }}>
+        <FlashList
+          data={groups}
+          keyExtractor={(item) => item[0]}
+          renderItem={renderDay}
+          extraData={t.dark}
+          onEndReached={() => {
+            if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+          }}
+          onEndReachedThreshold={0.4}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={t.accent}
+              colors={[t.accent]}
+              progressBackgroundColor={t.surface}
+            />
+          }
+          ListEmptyComponent={
+            isLoading ? (
+              <View style={{ gap: 10, marginTop: 8 }}>
+                {[0, 1, 2, 3].map((i) => (
+                  <Skeleton key={i} height={60} radius={14} />
+                ))}
               </View>
-            );
-          })
-        )}
+            ) : (
+              <EmptyState icon="search" title="No transactions" subtitle="Try a different search or filter." />
+            )
+          }
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                <ActivityIndicator color={t.accent} />
+              </View>
+            ) : null
+          }
+        />
+      </View>
 
-        {hasNextPage && (
-          <View style={{ marginTop: 16 }}>
-            <Button variant="neutral" loading={isFetchingNextPage} onPress={() => fetchNextPage()}>
-              Load more
-            </Button>
-          </View>
-        )}
-    </CollapsibleScreen>
+      <ActionMenu
+        open={!!menuFor}
+        onClose={() => setMenuFor(null)}
+        title={menuFor ? expenseToItem(menuFor).title : undefined}
+        actions={
+          menuFor
+            ? [
+                {
+                  icon: 'create-outline',
+                  label: 'Edit',
+                  onPress: () => router.push(`/edit-transaction?id=${menuFor.id}`),
+                },
+                {
+                  icon: 'trash-outline',
+                  label: 'Delete',
+                  destructive: true,
+                  onPress: () => confirmDelete(menuFor.id),
+                },
+              ]
+            : []
+        }
+      />
+    </Screen>
   );
 }

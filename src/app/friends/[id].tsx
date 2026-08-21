@@ -2,10 +2,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import React from 'react';
-import { RefreshControl, ScrollView, View } from 'react-native';
+import { Alert, RefreshControl, ScrollView, View } from 'react-native';
 
-import type { GroupExpense } from '@/api';
-import { useFriend, useFriendExpenses } from '@/features/hooks';
+import type { Friend, GroupExpense } from '@/api';
+import { errorMessage } from '@/api';
+import {
+  useConfirmFriend,
+  useDeclineFriend,
+  useFriend,
+  useFriendExpenses,
+} from '@/features/hooks';
 import { money } from '@/lib/money';
 import { useRefresh } from '@/lib/useRefresh';
 import { useTheme } from '@/theme';
@@ -18,6 +24,8 @@ export default function FriendDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: f, isLoading, refetch } = useFriend(id);
   const expenses = useFriendExpenses(id);
+  const confirm = useConfirmFriend(id);
+  const decline = useDeclineFriend(id);
   const { refreshing, onRefresh } = useRefresh([{ refetch }, expenses]);
 
   const owed = (f?.net ?? 0) > 0;
@@ -54,7 +62,13 @@ export default function FriendDetail() {
                 {f.displayName}
               </Txt>
               <Txt tone="ink3" variant="caption" style={{ marginTop: 2 }}>
-                {f.isRegistered ? 'On Spendes' : 'Invited'}
+                {f.needsMyReview
+                  ? 'They added you'
+                  : f.consent === 'declined'
+                    ? 'You said you don’t know them'
+                    : f.isRegistered
+                      ? 'On Spendes'
+                      : 'Invited'}
               </Txt>
               <View
                 style={{
@@ -77,6 +91,36 @@ export default function FriendDetail() {
                 </Txt>
               </View>
             </View>
+
+            {f.needsMyReview && (
+              <Review
+                f={f}
+                busy={confirm.isPending || decline.isPending}
+                onConfirm={() =>
+                  confirm.mutate(undefined, {
+                    onError: (e) => Alert.alert('Couldn’t confirm', errorMessage(e)),
+                  })
+                }
+                onDecline={() =>
+                  Alert.alert(
+                    `Don’t recognise ${f.displayName.split(' ')[0]}?`,
+                    'We’ll let them know they may have used the wrong number. Nothing is deleted — any shared expenses stay until they remove them.',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'I don’t know them',
+                        style: 'destructive',
+                        onPress: () =>
+                          decline.mutate(
+                            {},
+                            { onError: (e) => Alert.alert('Couldn’t send', errorMessage(e)) },
+                          ),
+                      },
+                    ],
+                  )
+                }
+              />
+            )}
 
             {!settled && (
               <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
@@ -155,5 +199,46 @@ export default function FriendDetail() {
         )}
       </ScrollView>
     </Screen>
+  );
+}
+
+/**
+ * The same question the inbox asks, asked where you'd also naturally ask it: this
+ * friendship arrived from their side and you haven't answered. Confirming costs
+ * nothing and blocks nothing — the balances below are real either way — it just
+ * makes the connection mutual instead of one-sided.
+ */
+function Review({
+  f,
+  busy,
+  onConfirm,
+  onDecline,
+}: {
+  f: Friend;
+  busy: boolean;
+  onConfirm: () => void;
+  onDecline: () => void;
+}) {
+  const t = useTheme();
+  const first = f.displayName.split(' ')[0];
+
+  return (
+    <Card style={{ marginTop: 18 }}>
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <Ionicons name="person-add-outline" size={18} color={t.warning} />
+        <Txt variant="caption" tone="ink2" style={{ flex: 1, lineHeight: 19 }}>
+          <Txt style={{ fontFamily: Font.semibold }}>{first}</Txt> added you on Spendes. Is that
+          right?
+        </Txt>
+      </View>
+      <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
+        <Button full={false} style={{ flex: 1 }} icon="checkmark" loading={busy} onPress={onConfirm}>
+          Looks right
+        </Button>
+        <Button full={false} style={{ flex: 1 }} variant="outline" onPress={onDecline}>
+          I don’t know them
+        </Button>
+      </View>
+    </Card>
   );
 }

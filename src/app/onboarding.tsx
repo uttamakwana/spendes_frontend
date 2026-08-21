@@ -2,7 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, TextInput, useWindowDimensions, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { authApi, errorMessage } from '@/api';
@@ -13,6 +21,9 @@ import { Font, tabularNums } from '@/theme/fonts';
 import { Avatar, BalancePill, Button, Card, CategoryIcon, IconButton, MoneyText, Txt, Wordmark } from '@/ui';
 
 type Stage = 'intro' | 'phone' | 'otp' | 'name';
+
+/** Same VPA shape the API enforces — checked here so sign-up can't end in a 400. */
+const UPI_ID = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/;
 
 const SLIDES = [
   {
@@ -43,6 +54,7 @@ export default function Onboarding() {
   const [otp, setOtp] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [upiId, setUpiId] = useState('');
   const [isRegistered, setIsRegistered] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,7 +81,16 @@ export default function Onboarding() {
   });
 
   const register = useMutation({
-    mutationFn: () => authApi.register({ phoneNumber: phone, firstName, lastName, otp }),
+    mutationFn: () =>
+      authApi.register({
+        phoneNumber: phone,
+        firstName,
+        lastName,
+        // Omitted entirely when left blank — the field is optional, and an empty
+        // string would fail the server's VPA format check.
+        upiId: upiId.trim() || undefined,
+        otp,
+      }),
     onSuccess: async (res) => {
       await signIn(res);
       router.replace('/(tabs)/home');
@@ -139,8 +160,10 @@ export default function Onboarding() {
         <NameStage
           firstName={firstName}
           lastName={lastName}
+          upiId={upiId}
           setFirstName={setFirstName}
           setLastName={setLastName}
+          setUpiId={setUpiId}
           error={error}
           loading={register.isPending}
           onSubmit={() => {
@@ -573,45 +596,76 @@ function OtpStage({
 function NameStage({
   firstName,
   lastName,
+  upiId,
   setFirstName,
   setLastName,
+  setUpiId,
   error,
   loading,
   onSubmit,
 }: {
   firstName: string;
   lastName: string;
+  upiId: string;
   setFirstName: (s: string) => void;
   setLastName: (s: string) => void;
+  setUpiId: (s: string) => void;
   error: string | null;
   loading: boolean;
   onSubmit: () => void;
 }) {
-  const valid = firstName.trim().length > 0 && lastName.trim().length > 0;
+  const upi = upiId.trim();
+  // Blank is fine (the field is optional); malformed is not, and catching it here
+  // beats a server 400 at the very end of sign-up.
+  const upiBad = upi.length > 0 && !UPI_ID.test(upi);
+  const valid = firstName.trim().length > 0 && lastName.trim().length > 0 && !upiBad;
+
   return (
-    <View style={{ flex: 1, paddingHorizontal: 28, paddingTop: 24 }}>
-      <Txt variant="title1">Welcome! Your name?</Txt>
-      <Txt tone="ink2" style={{ marginTop: 10, lineHeight: 22 }}>
-        This is how friends will recognise you in groups and splits.
-      </Txt>
-
-      <View style={{ marginTop: 28, gap: 12 }}>
-        <Field label="First name" value={firstName} onChange={setFirstName} autoFocus />
-        <Field label="Last name" value={lastName} onChange={setLastName} />
-      </View>
-
-      {error && (
-        <Txt tone="danger" variant="caption" style={{ marginTop: 16 }}>
-          {error}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={{ flex: 1 }}
+    >
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 28, paddingTop: 24 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Txt variant="title1">Welcome! Let’s set you up.</Txt>
+        <Txt tone="ink2" style={{ marginTop: 10, lineHeight: 22 }}>
+          Your name is how friends will recognise you in groups and splits.
         </Txt>
-      )}
 
-      <View style={{ flex: 1 }} />
-      <Button size="lg" disabled={!valid} loading={loading} onPress={onSubmit}>
-        Create account
-      </Button>
-      <View style={{ height: 16 }} />
-    </View>
+        <View style={{ marginTop: 28, gap: 12 }}>
+          <Field label="First name" value={firstName} onChange={setFirstName} autoFocus />
+          <Field label="Last name" value={lastName} onChange={setLastName} />
+          <Field
+            label="UPI ID (optional)"
+            value={upiId}
+            onChange={setUpiId}
+            placeholder="name@okhdfcbank"
+            autoCapitalize="none"
+          />
+        </View>
+
+        <Txt tone={upiBad ? 'danger' : 'ink3'} variant="caption" style={{ marginTop: 10, lineHeight: 18 }}>
+          {upiBad
+            ? 'That doesn’t look like a UPI ID — it should read like name@okhdfcbank.'
+            : 'Adding your UPI ID lets friends pay you back in one tap. You can add or change it later in your profile.'}
+        </Txt>
+
+        {error && (
+          <Txt tone="danger" variant="caption" style={{ marginTop: 16 }}>
+            {error}
+          </Txt>
+        )}
+
+        <View style={{ flex: 1, minHeight: 24 }} />
+        <Button size="lg" disabled={!valid} loading={loading} onPress={onSubmit}>
+          Create account
+        </Button>
+        <View style={{ height: 16 }} />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -620,11 +674,15 @@ function Field({
   value,
   onChange,
   autoFocus,
+  placeholder,
+  autoCapitalize = 'words',
 }: {
   label: string;
   value: string;
   onChange: (s: string) => void;
   autoFocus?: boolean;
+  placeholder?: string;
+  autoCapitalize?: 'none' | 'words';
 }) {
   const t = useTheme();
   return (
@@ -632,7 +690,13 @@ function Field({
       <Txt tone="ink3" variant="micro">
         {label}
       </Txt>
-      <TextInputField value={value} onChange={onChange} autoFocus={autoFocus} />
+      <TextInputField
+        value={value}
+        onChange={onChange}
+        autoFocus={autoFocus}
+        placeholder={placeholder}
+        autoCapitalize={autoCapitalize}
+      />
     </View>
   );
 }
@@ -641,10 +705,14 @@ function TextInputField({
   value,
   onChange,
   autoFocus,
+  placeholder,
+  autoCapitalize = 'words',
 }: {
   value: string;
   onChange: (s: string) => void;
   autoFocus?: boolean;
+  placeholder?: string;
+  autoCapitalize?: 'none' | 'words';
 }) {
   const t = useTheme();
   return (
@@ -652,7 +720,9 @@ function TextInputField({
       value={value}
       onChangeText={onChange}
       autoFocus={autoFocus}
-      autoCapitalize="words"
+      autoCapitalize={autoCapitalize}
+      autoCorrect={autoCapitalize === 'none' ? false : undefined}
+      placeholder={placeholder}
       placeholderTextColor={t.ink3}
       style={{ fontFamily: Font.semibold, fontSize: 17, color: t.ink, paddingVertical: 4 }}
     />

@@ -129,6 +129,15 @@ export function makeTheme(accent: string, dark: boolean): Theme {
 /** Curated brand accents offered in Settings. */
 export const ACCENTS = ['#4F46E5', '#0E9F6E', '#2563EB', '#7C3AED', '#E0533D'];
 
+/** Display names for {@link ACCENTS} — a swatch alone doesn't say what you picked. */
+export const ACCENT_LABELS: Record<string, string> = {
+  '#4F46E5': 'Indigo',
+  '#0E9F6E': 'Emerald',
+  '#2563EB': 'Blue',
+  '#7C3AED': 'Violet',
+  '#E0533D': 'Coral',
+};
+
 /** Categorical data-viz palette that harmonizes with the neutral canvas. */
 export const CAT_VIZ = [
   '#5C7AEA', '#DB7C5A', '#5B9279', '#C77DB1',
