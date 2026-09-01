@@ -19,6 +19,7 @@ export const qk = {
   groupSettlements: (id: string) => ['groups', id, 'settlements'] as const,
 
   friends: ['friends'] as const,
+  balances: ['balances'] as const,
   friend: (id: string) => ['friends', id] as const,
   friendExpenses: (id: string) => ['friends', id, 'expenses'] as const,
 

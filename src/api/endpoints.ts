@@ -5,6 +5,7 @@ import type {
   AppNotification,
   AuthResult,
   BalancesResponse,
+  BalancesSummary,
   Budget,
   BudgetPeriod,
   Cashflow,
@@ -239,6 +240,11 @@ export const friendsApi = {
     friendshipId: string,
     body: { fromMemberId?: string; toMemberId: string; amount: number; method?: PaymentMethod; note?: string; reference?: string },
   ) => post<Settlement>(`/friends/${friendshipId}/settlements`, body),
+};
+
+// ── Balances (cross-group + friendship roll-up) ────────────────────────────
+export const balancesApi = {
+  summary: () => get<BalancesSummary>('/balances'),
 };
 
 // ── Budgets ────────────────────────────────────────────────────────────────

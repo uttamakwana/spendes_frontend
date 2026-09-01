@@ -55,6 +55,24 @@ export default function Friends() {
           </View>
         </View>
 
+        <Pressable
+          onPress={() => router.push('/balances')}
+          style={({ pressed }) => ({
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            marginTop: -8,
+            marginBottom: 14,
+            paddingHorizontal: 4,
+            opacity: pressed ? 0.6 : 1,
+          })}
+        >
+          <Txt tone="ink3" variant="caption" style={{ flex: 1 }}>
+            1-on-1 splits only. See everything you owe, groups included
+          </Txt>
+          <Ionicons name="chevron-forward" size={14} color={t.ink3} />
+        </Pressable>
+
         {(data?.otherCurrencyCount ?? 0) > 0 && (
           <Txt tone="ink3" variant="caption" style={{ marginTop: -8, marginBottom: 14, paddingHorizontal: 4 }}>
             {data?.otherCurrencyCount === 1 ? 'One friend keeps' : `${data?.otherCurrencyCount} friends keep`}{' '}

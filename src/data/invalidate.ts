@@ -22,6 +22,7 @@ export function invalidateAfterGroupMutation(groupId: string) {
   queryClient.invalidateQueries({ queryKey: qk.group(groupId) });
   queryClient.invalidateQueries({ queryKey: qk.groups });
   queryClient.invalidateQueries({ queryKey: qk.friends });
+  queryClient.invalidateQueries({ queryKey: qk.balances });
   invalidatePersonalFinance();
 }
 
@@ -30,6 +31,7 @@ export function invalidateAfterFriendMutation(friendshipId: string) {
   queryClient.invalidateQueries({ queryKey: qk.friendExpenses(friendshipId) });
   queryClient.invalidateQueries({ queryKey: qk.friend(friendshipId) });
   queryClient.invalidateQueries({ queryKey: qk.friends });
+  queryClient.invalidateQueries({ queryKey: qk.balances });
   invalidatePersonalFinance();
 }
 

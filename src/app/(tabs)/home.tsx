@@ -8,7 +8,7 @@ import { useAuth } from '@/auth/AuthProvider';
 import {
   useBudgets,
   useCashflow,
-  useFriends,
+  useBalances,
   useGoals,
   useGroups,
   useOverview,
@@ -47,7 +47,7 @@ export default function Home() {
   const { user } = useAuth();
 
   const overview = useOverview();
-  const friends = useFriends();
+  const balances = useBalances();
   const recent = useRecentExpenses(4);
   const budgets = useBudgets();
   const goals = useGoals();
@@ -56,7 +56,7 @@ export default function Home() {
   const unread = useUnreadCount();
   const unreadCount = unread.data?.count ?? 0;
 
-  const { refreshing, onRefresh } = useRefresh([overview, friends, recent, budgets, goals, groups, cashflow, unread]);
+  const { refreshing, onRefresh } = useRefresh([overview, balances, recent, budgets, goals, groups, cashflow, unread]);
 
   const o = overview.data;
   const income = o?.income ?? 0;
@@ -67,8 +67,10 @@ export default function Home() {
   const safe = income - expense;
   const spentPct = income > 0 ? Math.min(100, (expense / income) * 100) : 0;
 
-  const owed = friends.data?.totalYouAreOwed ?? 0;
-  const owe = friends.data?.totalYouOwe ?? 0;
+  // Across friendships *and* groups, netted per person — money fronted for a flat
+  // is owed to you just as much as a one-on-one loan. Lifetime, not this month.
+  const owed = o?.balances.youAreOwed ?? 0;
+  const owe = o?.balances.youOwe ?? 0;
 
   const overBudgets = (budgets.data?.items ?? []).filter((b) => b.status === 'exceeded').length;
   const goalPct = (() => {
@@ -224,22 +226,27 @@ export default function Home() {
             )}
           </Card>
 
-          {/* owed / owe */}
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <StatTile
-              label="You’re owed"
-              value={owed}
-              color={t.success}
-              icon="arrow-down"
-              onPress={() => router.push('/friends')}
-            />
-            <StatTile
-              label="You owe"
-              value={owe}
-              color={t.danger}
-              icon="arrow-up"
-              onPress={() => router.push('/friends')}
-            />
+          {/* owed / owe — everything outstanding, unlike the month-scoped tiles above */}
+          <View>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <StatTile
+                label="You’re owed"
+                value={owed}
+                color={t.success}
+                icon="arrow-down"
+                onPress={() => router.push('/balances')}
+              />
+              <StatTile
+                label="You owe"
+                value={owe}
+                color={t.danger}
+                icon="arrow-up"
+                onPress={() => router.push('/balances')}
+              />
+            </View>
+            <Txt tone="ink3" variant="micro" style={{ marginTop: 6, paddingHorizontal: 4 }}>
+              Total outstanding across friends and groups — not just this month.
+            </Txt>
           </View>
 
           {/* net worth glance */}

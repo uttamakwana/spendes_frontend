@@ -7,6 +7,7 @@ import {
 
 import {
   analyticsApi,
+  balancesApi,
   budgetsApi,
   categoriesApi,
   CreateBudgetBody,
@@ -242,6 +243,10 @@ export const useInvestment = (id: string) =>
 export const useGroups = () => useQuery({ queryKey: qk.groups, queryFn: () => groupsApi.list() });
 export const useGroup = (id: string) =>
   useQuery({ queryKey: qk.group(id), queryFn: () => groupsApi.get(id), enabled: !!id });
+/** Everything you're owed and owe, across friendships *and* groups, per person. */
+export const useBalances = () =>
+  useQuery({ queryKey: qk.balances, queryFn: () => balancesApi.summary() });
+
 export const useFriends = () => useQuery({ queryKey: qk.friends, queryFn: () => friendsApi.list() });
 export const useFriend = (id: string) =>
   useQuery({ queryKey: qk.friend(id), queryFn: () => friendsApi.get(id), enabled: !!id });

@@ -286,6 +286,44 @@ export interface SettlementIntent {
   reference: string;
 }
 
+// ── Balances (everything you're owed / owe, across friends and groups) ─────
+export interface BalanceSource {
+  kind: 'friend' | 'group';
+  id: string;
+  name: string;
+  /** Positive = they owe you here; negative = you owe them here. */
+  net: number;
+}
+
+export interface PersonBalance {
+  userId?: string;
+  name: string;
+  avatarUrl?: string;
+  dialCode?: string;
+  phoneNumber?: string;
+  currency: string;
+  /** Positive = they owe you; negative = you owe them. Netted across everything. */
+  net: number;
+  isRegistered: boolean;
+  paymentHandleType?: PaymentHandleType;
+  canPayDirectly: boolean;
+  /** The 1-on-1 friendship, when there is one. */
+  friendshipId?: string;
+  /** Which groups/friendship the total is made of, largest first. */
+  sources: BalanceSource[];
+}
+
+export interface BalancesSummary {
+  /** The currency the totals are in — yours. */
+  currency: string;
+  youAreOwed: number;
+  youOwe: number;
+  net: number;
+  people: PersonBalance[];
+  /** People whose balance is in another currency — listed, never added in. */
+  otherCurrency: PersonBalance[];
+}
+
 // ── Friends ────────────────────────────────────────────────────────────────
 export interface Friend {
   friendshipId: string;
@@ -462,7 +500,27 @@ export interface AnalyticsOverview {
   savingsRate: number;
   topCategories: { category: string; totalAmount: number }[];
   commitments: { totalMonthlyCommitment: number; dueThisMonthCount: number; dueThisMonthTotal: number };
-  portfolio: { totalInvested: number; totalCurrentValue: number; totalGainLoss: number; gainLossPct: number };
+  portfolio: {
+    totalInvested: number;
+    totalCurrentValue: number;
+    totalGainLoss: number;
+    gainLossPct: number;
+    /** Combined monthly-equivalent of active SIP plans. */
+    totalMonthlySip: number;
+  };
+  /**
+   * What you're owed and owe, netted per person across every friendship *and*
+   * group. Unlike the figures above it isn't scoped to `period` — a debt from March
+   * is still a debt today. Full breakdown at `GET /balances`.
+   */
+  balances: { youAreOwed: number; youOwe: number; net: number };
+  goals: {
+    activeCount: number;
+    onTrackCount: number;
+    allOnTrack: boolean;
+    totalRequiredMonthlySaving: number;
+    disposableForGoals: number;
+  };
   netWorth: { assets: number; liabilities: number; net: number };
 }
 export interface CashflowPoint {
