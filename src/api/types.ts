@@ -150,6 +150,8 @@ export interface CategoryBreakdown {
   count?: number;
 }
 export interface ExpenseSummary {
+  /** The currency these totals are in — yours; other currencies are excluded. */
+  currency: string;
   totalAmount: number;
   /** Actual cash paid out of pocket (personal + your payer share of splits). */
   cashOutflow?: number;
@@ -313,9 +315,13 @@ export interface Friend {
 }
 export interface FriendsResponse {
   friends: Friend[];
+  /** The currency the totals are in — yours. */
+  currency: string;
   totalYouAreOwed: number;
   totalYouOwe: number;
   net: number;
+  /** Friendships in another currency, counted rather than added (nothing is converted). */
+  otherCurrencyCount: number;
 }
 
 // ── Budgets ────────────────────────────────────────────────────────────────

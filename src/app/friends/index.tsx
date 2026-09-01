@@ -55,6 +55,13 @@ export default function Friends() {
           </View>
         </View>
 
+        {(data?.otherCurrencyCount ?? 0) > 0 && (
+          <Txt tone="ink3" variant="caption" style={{ marginTop: -8, marginBottom: 14, paddingHorizontal: 4 }}>
+            {data?.otherCurrencyCount === 1 ? 'One friend keeps' : `${data?.otherCurrencyCount} friends keep`}{' '}
+            their balance in another currency, shown on their own row.
+          </Txt>
+        )}
+
         {isLoading ? (
           <View style={{ gap: 10 }}>
             {[0, 1, 2].map((i) => (
