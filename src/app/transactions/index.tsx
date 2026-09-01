@@ -3,13 +3,22 @@ import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { format, isToday, isYesterday } from 'date-fns';
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  TextInput,
+  View,
+} from 'react-native';
 
 import type { Expense } from '@/api';
 import { useDeleteExpense, useExpenses } from '@/features/hooks';
 import { expenseToItem, TxnRow } from '@/features/transactions/TxnRow';
 import { haptics } from '@/lib/haptics';
 import { money } from '@/lib/money';
+import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { useRefresh } from '@/lib/useRefresh';
 import { useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
@@ -32,16 +41,33 @@ export default function Transactions() {
   const [search, setSearch] = useState('');
   const [method, setMethod] = useState<(typeof FILTERS)[number]>('all');
 
+  // The field updates on every keystroke; the query waits for a pause. Without
+  // this, each character was its own request — and its own empty list.
+  const debouncedSearch = useDebouncedValue(search.trim(), 350);
+
   const filters = useMemo(
     () => ({
-      search: search || undefined,
+      search: debouncedSearch || undefined,
       paymentMethod: method === 'all' ? undefined : (method as 'upi' | 'card' | 'cash'),
       limit: 20,
     }),
-    [search, method],
+    [debouncedSearch, method],
   );
 
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } = useExpenses(filters);
+  const {
+    data,
+    isLoading,
+    isPlaceholderData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = useExpenses(filters);
+
+  // Results on screen belong to the previous filter, or the field has changed and
+  // the query hasn't caught up yet. Either way something is in flight — say so in
+  // the search box rather than tearing the list down.
+  const settling = isPlaceholderData || debouncedSearch !== search.trim();
   const items: Expense[] = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data]);
   const { refreshing, onRefresh } = useRefresh([{ refetch }]);
   const del = useDeleteExpense();
@@ -129,8 +155,22 @@ export default function Transactions() {
             onChangeText={setSearch}
             placeholder="Search merchant or note"
             placeholderTextColor={t.ink3}
+            autoCorrect={false}
+            autoCapitalize="none"
+            returnKeyType="search"
+            clearButtonMode="never"
             style={{ flex: 1, fontFamily: Font.regular, fontSize: 15, color: t.ink }}
           />
+          {/* Fixed-width slot so the field never reflows as this swaps. */}
+          <View style={{ width: 20, alignItems: 'center', justifyContent: 'center' }}>
+            {settling ? (
+              <ActivityIndicator size="small" color={t.ink3} />
+            ) : search.length > 0 ? (
+              <Pressable onPress={() => setSearch('')} hitSlop={12}>
+                <Ionicons name="close-circle" size={18} color={t.ink3} />
+              </Pressable>
+            ) : null}
+          </View>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 8 }}>
           {FILTERS.map((f) => {
@@ -167,7 +207,9 @@ export default function Transactions() {
           renderItem={renderDay}
           extraData={t.dark}
           onEndReached={() => {
-            if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+            // Not while showing the previous filter's results — that page belongs
+            // to a query we're about to replace.
+            if (hasNextPage && !isFetchingNextPage && !isPlaceholderData) fetchNextPage();
           }}
           onEndReachedThreshold={0.4}
           showsVerticalScrollIndicator={false}
@@ -182,14 +224,20 @@ export default function Transactions() {
             />
           }
           ListEmptyComponent={
+            // Skeletons belong to the first load only. Once there are results to
+            // keep, a filter change holds them until the new ones arrive.
             isLoading ? (
               <View style={{ gap: 10, marginTop: 8 }}>
                 {[0, 1, 2, 3].map((i) => (
                   <Skeleton key={i} height={60} radius={14} />
                 ))}
               </View>
-            ) : (
-              <EmptyState icon="search" title="No transactions" subtitle="Try a different search or filter." />
+            ) : settling ? null : (
+              <EmptyState
+                icon="search"
+                title={debouncedSearch ? `Nothing matches “${debouncedSearch}”` : 'No transactions'}
+                subtitle="Try a different search or filter."
+              />
             )
           }
           ListFooterComponent={

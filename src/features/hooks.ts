@@ -1,4 +1,5 @@
 import {
+  keepPreviousData,
   useInfiniteQuery,
   useMutation,
   useQuery,
@@ -133,6 +134,11 @@ export const useExpenses = (filters?: ExpenseFilters) =>
     queryFn: ({ pageParam = 1 }) => expensesApi.list({ ...filters, page: pageParam, limit: filters?.limit ?? 20 }),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.meta.hasNextPage ? last.meta.page + 1 : undefined),
+    // Changing a filter changes the query key, and a fresh key has no data — which
+    // would blank the list and flash skeletons on every search keystroke. Holding
+    // the previous results until the new ones land keeps the screen still; callers
+    // use `isPlaceholderData` to show that a refresh is in flight.
+    placeholderData: keepPreviousData,
   });
 
 export const useRecentExpenses = (limit = 5) =>
@@ -185,6 +191,8 @@ export const useIncomeList = (filters?: Record<string, unknown>) =>
     queryFn: ({ pageParam = 1 }) => incomeApi.list({ ...filters, page: pageParam, limit: 20 }),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.meta.hasNextPage ? last.meta.page + 1 : undefined),
+    // Same reasoning as `useExpenses`: a filter change shouldn't empty the list.
+    placeholderData: keepPreviousData,
   });
 
 export const useIncome = (id: string) =>
