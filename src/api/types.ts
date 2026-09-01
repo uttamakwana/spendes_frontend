@@ -63,8 +63,13 @@ export interface User {
   avatarUrl?: string;
   roles: string[];
   plan: PlanType;
-  upiId?: string;
+  /** How this user gets paid back when settling up. */
+  paymentHandle?: PaymentHandle;
   notificationPreferences: NotificationPreferences;
+  /** ISO 3166-1 alpha-2 — drives currency, phone rule and settle-up rail. */
+  country: string;
+  /** IANA zone, so budgets and analytics use this user's own month. */
+  timezone: string;
   defaultCurrency: string;
   isPhoneVerified: boolean;
   isEmailVerified: boolean;
@@ -73,6 +78,29 @@ export interface User {
   createdAt: string;
   updatedAt: string;
 }
+/** The settle-up rails Spendes can build a link for. */
+export type PaymentHandleType = 'upi' | 'paypal' | 'venmo' | 'cashapp' | 'other';
+
+/** Where settle-up money goes: the rail, and the handle on it. */
+export interface PaymentHandle {
+  type: PaymentHandleType;
+  value: string;
+}
+
+/** A country Spendes accepts sign-ups from (`GET /reference/countries`). */
+export interface CountryReference {
+  code: string;
+  name: string;
+  dialCode: string;
+  flag: string;
+  currency: string;
+  currencySymbol: string;
+  /** Allowed national-number lengths, for the sign-up keypad. */
+  phoneLengths: number[];
+  defaultHandle: PaymentHandleType;
+  timezone: string;
+}
+
 export interface AuthResult {
   user: User;
   tokens: Tokens;
@@ -241,13 +269,18 @@ export interface Settlement {
 }
 export interface SettlementIntent {
   provider: string;
-  uri: string;
+  /** Deep link to open. Absent when the payee's rail can't be linked into. */
+  uri?: string;
+  handleType: PaymentHandleType;
+  /** Human label for the rail, e.g. "UPI", "PayPal". */
+  railLabel: string;
+  toMemberId: string;
   payeeName: string;
-  payeeVpa: string;
+  /** The payee's handle — shown to copy when there's no link, or the link fails. */
+  payeeHandle: string;
   amount: number;
   currency: string;
   note?: string;
-  /** Transaction reference to pass back when recording the settlement (idempotency). */
   reference: string;
 }
 
@@ -262,6 +295,10 @@ export interface Friend {
   isRegistered: boolean;
   dialCode?: string;
   phoneNumber?: string;
+  /** Their settle-up rail, so the Pay button can name it before building an intent. */
+  paymentHandleType?: PaymentHandleType;
+  /** Whether their rail can carry this friendship's currency (no FX anywhere). */
+  canPayDirectly: boolean;
   currency: string;
   net: number;
   /** Your answer to "they added you" — `pending` means it's still unanswered. */
@@ -539,6 +576,8 @@ export interface NotificationDetail extends AppNotification {
     payAmount: number;
     payeeMemberId?: string;
     payerMemberId?: string;
+    /** The payee's rail ("UPI", "Venmo"), for the Pay button's copy. */
+    payRailLabel?: string;
     payBlockedReason?: string;
   };
 }

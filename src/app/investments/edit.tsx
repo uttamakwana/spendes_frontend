@@ -6,6 +6,7 @@ import { errorMessage } from '@/api';
 import { AmountField, ChipSelect, DateField, LabeledInput } from '@/features/forms/Fields';
 import { useInvestment, useUpdateInvestment } from '@/features/hooks';
 import { Button, CollapsibleScreen, Skeleton, Txt } from '@/ui';
+import { currencySymbol } from '@/lib/money';
 
 export default function EditInvestment() {
   const router = useRouter();
@@ -118,7 +119,7 @@ export default function EditInvestment() {
                 onChangeText={(v) => setSipAmount(v.replace(/[^0-9]/g, ''))}
                 placeholder="e.g. 5000"
                 keyboardType="number-pad"
-                prefix="₹"
+                prefix={currencySymbol()}
               />
               <ChipSelect
                 label="Frequency"
@@ -146,7 +147,7 @@ export default function EditInvestment() {
             onChangeText={(v) => setCurrent(v.replace(/[^0-9]/g, ''))}
             placeholder="Defaults to invested amount"
             keyboardType="number-pad"
-            prefix="₹"
+            prefix={currencySymbol()}
           />
           <LabeledInput
             label="Platform (optional)"

@@ -4,8 +4,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Linking, Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { errorMessage } from '@/api';
+import { useAuth } from '@/auth/AuthProvider';
 import { DeviceContact, inviteByText, useContacts } from '@/features/contacts/useContacts';
 import { useAddFriend } from '@/features/hooks';
+import { DEFAULT_COUNTRY, findCountry } from '@/lib/countries';
 import { useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
 import { Avatar, Button, Card, EmptyState, Screen, Txt, TopBar } from '@/ui';
@@ -13,7 +15,10 @@ import { Avatar, Button, Card, EmptyState, Screen, Txt, TopBar } from '@/ui';
 export default function AddFriend() {
   const t = useTheme();
   const router = useRouter();
-  const { contacts, status, load } = useContacts();
+  const { user } = useAuth();
+  // Numbers stored without a country code are read as the user's own country.
+  const home = findCountry(user?.country) ?? DEFAULT_COUNTRY;
+  const { contacts, status, load } = useContacts(home);
   const addFriend = useAddFriend();
 
   const [search, setSearch] = useState('');
@@ -33,12 +38,13 @@ export default function AddFriend() {
 
   const onAdd = (c: DeviceContact) => {
     setError(null);
-    setPending(c.phone);
+    setPending(c.e164);
     addFriend.mutate(
-      { phoneNumber: c.phone, displayName: c.name },
+      // The dial code travels with the number: a friend in the US is not a +91 one.
+      { dialCode: c.dialCode, phoneNumber: c.phone, displayName: c.name },
       {
         onSuccess: () => {
-          setAdded((s) => ({ ...s, [c.phone]: true }));
+          setAdded((s) => ({ ...s, [c.e164]: true }));
           setPending(null);
         },
         onError: (e) => {
@@ -114,8 +120,8 @@ export default function AddFriend() {
                 </Txt>
               ) : (
                 filtered.slice(0, 200).map((c, i, arr) => {
-                  const isAdded = added[c.phone];
-                  const isPending = pending === c.phone;
+                  const isAdded = added[c.e164];
+                  const isPending = pending === c.e164;
                   return (
                     <View
                       key={c.id}
@@ -134,13 +140,13 @@ export default function AddFriend() {
                           {c.name}
                         </Txt>
                         <Txt tone="ink3" variant="caption">
-                          +91 {c.phone}
+                          {c.dialCode} {c.phone}
                         </Txt>
                       </View>
 
                       {/* invite via SMS */}
                       <Pressable
-                        onPress={() => inviteByText(c.name, c.phone)}
+                        onPress={() => inviteByText(c.name, c.e164)}
                         hitSlop={8}
                         style={{ width: 36, height: 36, borderRadius: 999, backgroundColor: t.fill, alignItems: 'center', justifyContent: 'center' }}
                       >

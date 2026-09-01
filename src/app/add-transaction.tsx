@@ -10,21 +10,37 @@ import { formatWhen, useWhenPicker } from '@/features/forms/Fields';
 import { useCategories, useCreateExpense, useCreateIncome } from '@/features/hooks';
 import { Keypad } from '@/features/auth/Keypad';
 import { categoryStyle } from '@/lib/categories';
-import { money } from '@/lib/money';
+import { currencySymbol, moneyAmount } from '@/lib/money';
+import { useAuth } from '@/auth/AuthProvider';
 import { hexA, useTheme } from '@/theme';
 import { Font, tabularNums } from '@/theme/fonts';
 import { Button, CategoryIcon, IconButton, Segmented, Sheet, Txt } from '@/ui';
 
-const METHODS: { id: PaymentMethod; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { id: 'upi', label: 'UPI', icon: 'phone-portrait' },
+interface Method {
+  id: PaymentMethod;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  /** Countries this method exists in; omitted means everywhere. */
+  only?: string[];
+}
+
+const METHODS: Method[] = [
+  { id: 'upi', label: 'UPI', icon: 'phone-portrait', only: ['IN'] },
   { id: 'card', label: 'Card', icon: 'card' },
   { id: 'cash', label: 'Cash', icon: 'cash' },
   { id: 'bank_transfer', label: 'Bank', icon: 'business' },
   { id: 'wallet', label: 'Wallet', icon: 'wallet' },
 ];
 
+/** The payment methods worth offering in a country — UPI is meaningless outside India. */
+function methodsFor(country?: string): Method[] {
+  return METHODS.filter((m) => !m.only || (country ? m.only.includes(country) : true));
+}
+
 export default function AddTransaction() {
+  const { user } = useAuth();
   const t = useTheme();
+  const methods = methodsFor(user?.country);
   const router = useRouter();
   const params = useLocalSearchParams<{ kind?: string }>();
   const [kind, setKind] = useState<'expense' | 'income'>(params.kind === 'income' ? 'income' : 'expense');
@@ -138,13 +154,13 @@ export default function AddTransaction() {
 
         <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
           <Txt color={t.ink3} style={{ fontSize: 30, marginTop: 8 }}>
-            ₹
+            {currencySymbol()}
           </Txt>
           <Txt
             color={num ? t.ink : t.ink3}
             style={[{ fontFamily: Font.bold, fontSize: 56, lineHeight: 62 }, tabularNums]}
           >
-            {money(num).replace('₹', '')}
+            {moneyAmount(num)}
           </Txt>
         </View>
 
@@ -178,7 +194,7 @@ export default function AddTransaction() {
       {/* details + keypad */}
       <View style={{ backgroundColor: t.canvas2, borderTopLeftRadius: 26, borderTopRightRadius: 26, borderTopWidth: 1, borderTopColor: t.hair, paddingHorizontal: 16, paddingTop: 16 }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
-          {METHODS.map((m) => {
+          {methods.map((m) => {
             const on = method === m.id;
             return (
               <Pressable

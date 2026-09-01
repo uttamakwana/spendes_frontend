@@ -7,6 +7,7 @@ import { AmountField, ChipSelect, LabeledInput } from '@/features/forms/Fields';
 import { useCreateGoal } from '@/features/hooks';
 import { monthsFromNowISO } from '@/lib/date';
 import { Button, CollapsibleScreen, Txt } from '@/ui';
+import { currencySymbol } from '@/lib/money';
 
 type Deadline = 'none' | '6' | '12' | '24';
 
@@ -40,7 +41,7 @@ export default function NewGoal() {
     <CollapsibleScreen title="New goal" contentContainerStyle={{ padding: 16, gap: 16 }}>
         <AmountField value={target} onChange={setTarget} label="Target amount" />
         <LabeledInput label="Goal name" value={name} onChangeText={setName} placeholder="e.g. Europe trip, Emergency fund" autoCapitalize="sentences" />
-        <LabeledInput label="Already saved (optional)" value={current} onChangeText={(v) => setCurrent(v.replace(/[^0-9]/g, ''))} placeholder="0" keyboardType="number-pad" prefix="₹" />
+        <LabeledInput label="Already saved (optional)" value={current} onChangeText={(v) => setCurrent(v.replace(/[^0-9]/g, ''))} placeholder="0" keyboardType="number-pad" prefix={currencySymbol()} />
         <ChipSelect
           label="Target date"
           value={deadline}

@@ -13,6 +13,7 @@ import {
   useFriendExpenses,
 } from '@/features/hooks';
 import { money } from '@/lib/money';
+import { PAYMENT_RAILS } from '@/lib/payment-rails';
 import { useRefresh } from '@/lib/useRefresh';
 import { useTheme } from '@/theme';
 import { Font } from '@/theme/fonts';
@@ -30,6 +31,9 @@ export default function FriendDetail() {
 
   const owed = (f?.net ?? 0) > 0;
   const settled = (f?.net ?? 0) === 0;
+  // Only name a rail we can actually open for this currency — no conversion here.
+  const payRail =
+    f?.canPayDirectly && f.paymentHandleType ? PAYMENT_RAILS[f.paymentHandleType].label : undefined;
 
   const shareInfo = (e: GroupExpense) => {
     const mine = f ? e.splits.find((s) => s.memberId === f.myMemberId)?.amount ?? 0 : 0;
@@ -86,7 +90,14 @@ export default function FriendDetail() {
                       all settled
                     </Txt>
                   ) : (
-                    <MoneyText value={Math.abs(f.net)} size={16} weight="bold" color={owed ? t.success : t.danger} animate />
+                    <MoneyText
+                      value={Math.abs(f.net)}
+                      size={16}
+                      weight="bold"
+                      color={owed ? t.success : t.danger}
+                      currency={f.currency}
+                      animate
+                    />
                   )}
                 </Txt>
               </View>
@@ -133,11 +144,11 @@ export default function FriendDetail() {
                     owed
                       ? undefined
                       : router.push(
-                          `/settle?kind=friend&id=${id}&toMemberId=${f.friendMemberId}&amount=${Math.abs(f.net)}&name=${encodeURIComponent(f.displayName)}`,
+                          `/settle?kind=friend&id=${id}&toMemberId=${f.friendMemberId}&amount=${Math.abs(f.net)}&name=${encodeURIComponent(f.displayName)}&currency=${f.currency}${payRail ? `&rail=${encodeURIComponent(payRail)}` : ''}`,
                         )
                   }
                 >
-                  {owed ? 'Send reminder' : 'Pay via UPI'}
+                  {owed ? 'Send reminder' : payRail ? `Pay via ${payRail}` : 'Settle up'}
                 </Button>
                 <Button
                   variant="outline"
@@ -145,7 +156,7 @@ export default function FriendDetail() {
                   style={{ flex: 1 }}
                   onPress={() =>
                     router.push(
-                      `/settle?kind=friend&id=${id}&toMemberId=${owed ? f.myMemberId : f.friendMemberId}&fromMemberId=${owed ? f.friendMemberId : f.myMemberId}&amount=${Math.abs(f.net)}&name=${encodeURIComponent(f.displayName)}&incoming=${owed ? 1 : 0}`,
+                      `/settle?kind=friend&id=${id}&toMemberId=${owed ? f.myMemberId : f.friendMemberId}&fromMemberId=${owed ? f.friendMemberId : f.myMemberId}&amount=${Math.abs(f.net)}&name=${encodeURIComponent(f.displayName)}&currency=${f.currency}&incoming=${owed ? 1 : 0}`,
                     )
                   }
                 >
@@ -178,7 +189,9 @@ export default function FriendDetail() {
                             {e.description}
                           </Txt>
                           <Txt tone="ink3" variant="caption">
-                            {iPaid ? 'You' : f.displayName.split(' ')[0]} paid {money(e.amount)} · {format(new Date(e.spentAt), 'MMM d')}
+                            {iPaid ? 'You' : f.displayName.split(' ')[0]} paid{' '}
+                            {money(e.amount, { currency: e.currency })} ·{' '}
+                            {format(new Date(e.spentAt), 'MMM d')}
                           </Txt>
                         </View>
                         <View style={{ alignItems: 'flex-end' }}>
@@ -186,7 +199,7 @@ export default function FriendDetail() {
                             {iPaid ? 'lent' : 'borrowed'}
                           </Txt>
                           <Txt color={iPaid ? t.success : t.danger} style={{ fontFamily: Font.semibold, fontSize: 14 }}>
-                            {money(mine)}
+                            {money(mine, { currency: e.currency })}
                           </Txt>
                         </View>
                       </View>

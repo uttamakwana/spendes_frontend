@@ -45,10 +45,13 @@ export function BalancePill({
   net,
   size = 'md',
   showLabel = true,
+  currency,
 }: {
   net: number;
   size?: 'sm' | 'md';
   showLabel?: boolean;
+  /** Render in this currency instead of the viewer's. */
+  currency?: string | null;
 }) {
   const t = useTheme();
   const settled = net === 0;
@@ -65,7 +68,7 @@ export function BalancePill({
         color={color}
         style={[{ fontFamily: Font.semibold, fontSize: size === 'sm' ? 13 : 15 }, tabularNums]}
       >
-        {settled ? 'settled' : money(Math.abs(net))}
+        {settled ? 'settled' : money(Math.abs(net), { currency })}
       </Txt>
     </View>
   );

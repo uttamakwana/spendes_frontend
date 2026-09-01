@@ -17,6 +17,8 @@ export interface MoneyTextProps {
   dim?: boolean;
   /** Count up to the value (and between value changes). For hero/summary figures. */
   animate?: boolean;
+  /** Render in this currency instead of the viewer's — a group settling in its own. */
+  currency?: string | null;
   style?: StyleProp<TextStyle>;
 }
 
@@ -68,6 +70,7 @@ export function MoneyText({
   paise = false,
   dim = false,
   animate = false,
+  currency,
   style,
 }: MoneyTextProps) {
   const t = useTheme();
@@ -94,7 +97,7 @@ export function MoneyText({
         style,
       ]}
     >
-      {money(display, { sign, paise })}
+      {money(display, { sign, paise, currency })}
     </Text>
   );
 }

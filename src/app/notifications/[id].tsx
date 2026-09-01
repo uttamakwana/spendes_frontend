@@ -60,8 +60,10 @@ export default function NotificationReview() {
     const name = encodeURIComponent(n.actor?.name ?? n.connection.name);
     // `notificationId` is what lets the settle flow close this request: paying a
     // split is agreeing with it, so we never ask again afterwards.
+    const rail = n.actions.payRailLabel ? `&rail=${encodeURIComponent(n.actions.payRailLabel)}` : '';
+    const currency = n.balance?.currency ? `&currency=${n.balance.currency}` : '';
     router.push(
-      `/settle?kind=${kind}&id=${n.connection.id}&toMemberId=${n.actions.payeeMemberId}&amount=${n.actions.payAmount}&name=${name}&notificationId=${n.id}`,
+      `/settle?kind=${kind}&id=${n.connection.id}&toMemberId=${n.actions.payeeMemberId}&amount=${n.actions.payAmount}&name=${name}${currency}${rail}&notificationId=${n.id}`,
     );
   };
 
@@ -210,9 +212,11 @@ function Ask({ n }: { n: NotificationDetail }) {
         YOUR SHARE
       </Txt>
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginTop: 2 }}>
-        <Txt style={{ fontFamily: Font.bold, fontSize: 34 }}>{money(e.myShare)}</Txt>
+        <Txt style={{ fontFamily: Font.bold, fontSize: 34 }}>
+          {money(e.myShare, { currency: e.currency })}
+        </Txt>
         <Txt tone="ink3" variant="caption" style={{ paddingBottom: 7 }}>
-          of {money(e.amount)}
+          of {money(e.amount, { currency: e.currency })}
         </Txt>
       </View>
 
@@ -264,7 +268,7 @@ function Standing({ n, onPress }: { n: NotificationDetail; onPress: () => void }
               color={owed ? t.success : t.danger}
               style={{ fontFamily: Font.bold, fontSize: 15 }}
             >
-              {money(Math.abs(net))}
+              {money(Math.abs(net), { currency: n.balance?.currency })}
             </Txt>
           </>
         )}
@@ -353,14 +357,15 @@ function Actions({
       icon="phone-portrait"
       onPress={onPay}
     >
-      Pay {money(a.payAmount)} via UPI
+      Pay {money(a.payAmount, { currency: n.balance?.currency })}
+      {a.payRailLabel ? ` via ${a.payRailLabel}` : ''}
     </Button>
   ) : null;
 
   const markBtn =
     a.canMarkPaid && !a.canPay ? (
       <Button key="mark" size="lg" variant="outline" icon="checkmark-done" onPress={onPay}>
-        Settle {money(a.payAmount)}
+        Settle {money(a.payAmount, { currency: n.balance?.currency })}
       </Button>
     ) : a.canMarkPaid ? (
       <Button key="mark" size="lg" variant="outline" onPress={onPay}>

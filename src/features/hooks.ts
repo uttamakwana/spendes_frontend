@@ -27,6 +27,7 @@ import {
   investmentsApi,
   MemberInput,
   notificationsApi,
+  PaymentMethod,
   qk,
   splitsApi,
 } from '@/api';
@@ -432,9 +433,10 @@ type RecordSettlementBody = {
   fromMemberId?: string;
   toMemberId: string;
   amount: number;
-  method?: 'upi' | 'cash';
+  /** How it was paid. `other` covers every non-UPI rail (PayPal, Venmo, Cash App). */
+  method?: PaymentMethod;
   note?: string;
-  /** UPI transaction reference from the intent — makes recording idempotent. */
+  /** Transaction reference from the intent — makes recording idempotent. */
   reference?: string;
 };
 export function useRecordGroupSettlement(groupId: string) {

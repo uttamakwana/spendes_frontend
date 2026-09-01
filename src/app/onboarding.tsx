@@ -13,23 +13,43 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { authApi, errorMessage } from '@/api';
+import type { CountryReference, PaymentHandleType } from '@/api';
+import { authApi, errorMessage, referenceApi } from '@/api';
 import { useAuth } from '@/auth/AuthProvider';
 import { Keypad } from '@/features/auth/Keypad';
+import {
+  COUNTRIES,
+  deviceTimezone,
+  examplePhone,
+  findCountry,
+  formatNationalNumber,
+  guessCountry,
+} from '@/lib/countries';
+import { PAYMENT_RAILS, RAIL_ORDER } from '@/lib/payment-rails';
 import { hexA, useTheme } from '@/theme';
 import { Font, tabularNums } from '@/theme/fonts';
-import { Avatar, BalancePill, Button, Card, CategoryIcon, IconButton, MoneyText, Txt, Wordmark } from '@/ui';
+import {
+  Avatar,
+  BalancePill,
+  Button,
+  Card,
+  CategoryIcon,
+  IconButton,
+  MoneyText,
+  Sheet,
+  Txt,
+  Wordmark,
+} from '@/ui';
 
 type Stage = 'intro' | 'phone' | 'otp' | 'name';
 
-/** Same VPA shape the API enforces — checked here so sign-up can't end in a 400. */
-const UPI_ID = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/;
+
 
 const SLIDES = [
   {
     hero: HeroSafe,
     title: 'All your money,\nfinally calm.',
-    body: 'Track every rupee across UPI, cards and cash. See what’s truly safe to spend — at a glance.',
+    body: 'Track every payment across apps, cards and cash. See what’s truly safe to spend — at a glance.',
   },
   {
     hero: HeroSplit,
@@ -39,7 +59,7 @@ const SLIDES = [
   {
     hero: HeroSettle,
     title: 'Settle up in\none tap.',
-    body: 'Simplified balances tell you exactly who pays whom — then pay over UPI without leaving the app.',
+    body: 'Simplified balances tell you exactly who pays whom — then pay them without leaving the app.',
   },
 ];
 
@@ -54,12 +74,42 @@ export default function Onboarding() {
   const [otp, setOtp] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [upiId, setUpiId] = useState('');
+
+  // The country decides the dial code, how many digits the number has, which
+  // currency the account keeps its books in, and which settle-up rail we offer.
+  const [countries, setCountries] = useState<CountryReference[]>(COUNTRIES);
+  const [country, setCountry] = useState<CountryReference>(() => guessCountry());
+  const [handleType, setHandleType] = useState<PaymentHandleType>(country.defaultHandle);
+  const [handleValue, setHandleValue] = useState('');
+
+  // The shipped country list works offline; this refreshes it so a build from
+  // before a market opened still offers it.
+  useEffect(() => {
+    let alive = true;
+    referenceApi
+      .countries()
+      .then((res) => {
+        if (!alive || res.countries.length === 0) return;
+        setCountries(res.countries);
+        setCountry((current) => findCountry(current.code, res.countries) ?? current);
+      })
+      .catch(() => {
+        // Offline or the endpoint is unreachable — the bundled list is fine.
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [isRegistered, setIsRegistered] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const requestOtp = useMutation({
-    mutationFn: () => authApi.requestOtp({ phoneNumber: phone }),
+    mutationFn: () =>
+      authApi.requestOtp({
+        dialCode: country.dialCode,
+        phoneNumber: phone,
+        country: country.code,
+      }),
     onSuccess: (res) => {
       setIsRegistered(res.isRegistered);
       setOtp('');
@@ -69,7 +119,8 @@ export default function Onboarding() {
   });
 
   const login = useMutation({
-    mutationFn: () => authApi.login({ phoneNumber: phone, otp }),
+    mutationFn: () =>
+      authApi.login({ dialCode: country.dialCode, phoneNumber: phone, country: country.code, otp }),
     onSuccess: async (res) => {
       await signIn(res);
       router.replace('/(tabs)/home');
@@ -83,12 +134,18 @@ export default function Onboarding() {
   const register = useMutation({
     mutationFn: () =>
       authApi.register({
+        dialCode: country.dialCode,
         phoneNumber: phone,
+        country: country.code,
+        // The device's zone, so "this month" means their month from day one.
+        timezone: deviceTimezone(country.timezone),
         firstName,
         lastName,
         // Omitted entirely when left blank — the field is optional, and an empty
-        // string would fail the server's VPA format check.
-        upiId: upiId.trim() || undefined,
+        // value would fail the server's per-rail format check.
+        paymentHandle: handleValue.trim()
+          ? { type: handleType, value: handleValue.trim() }
+          : undefined,
         otp,
       }),
     onSuccess: async (res) => {
@@ -135,6 +192,14 @@ export default function Onboarding() {
         <PhoneStage
           phone={phone}
           setPhone={setPhone}
+          country={country}
+          countries={countries}
+          onCountry={(next) => {
+            setCountry(next);
+            setPhone('');
+            setHandleType(next.defaultHandle);
+            setError(null);
+          }}
           error={error}
           loading={requestOtp.isPending}
           onSubmit={() => {
@@ -146,7 +211,7 @@ export default function Onboarding() {
 
       {stage === 'otp' && (
         <OtpStage
-          phone={phone}
+          phone={`${country.dialCode} ${formatNationalNumber(phone, country)}`}
           otp={otp}
           setOtp={setOtp}
           error={error}
@@ -160,10 +225,13 @@ export default function Onboarding() {
         <NameStage
           firstName={firstName}
           lastName={lastName}
-          upiId={upiId}
+          country={country}
+          handleType={handleType}
+          handleValue={handleValue}
           setFirstName={setFirstName}
           setLastName={setLastName}
-          setUpiId={setUpiId}
+          setHandleType={setHandleType}
+          setHandleValue={setHandleValue}
           error={error}
           loading={register.isPending}
           onSubmit={() => {
@@ -407,7 +475,7 @@ function HeroSettle() {
       >
         <Ionicons name="phone-portrait" size={18} color="#fff" />
         <Txt color="#fff" style={{ fontFamily: Font.semibold }}>
-          Pay via UPI
+          Settle up
         </Txt>
       </View>
     </Card>
@@ -418,19 +486,38 @@ function HeroSettle() {
 function PhoneStage({
   phone,
   setPhone,
+  country,
+  countries,
+  onCountry,
   error,
   loading,
   onSubmit,
 }: {
   phone: string;
   setPhone: (s: string) => void;
+  country: CountryReference;
+  countries: CountryReference[];
+  onCountry: (c: CountryReference) => void;
   error: string | null;
   loading: boolean;
   onSubmit: () => void;
 }) {
   const t = useTheme();
-  const valid = phone.length === 10;
-  const display = phone ? phone.replace(/(\d{5})(\d+)/, '$1 $2') : '98765 43210';
+  const [picker, setPicker] = useState(false);
+  const [search, setSearch] = useState('');
+
+  // How long a number may be is the country's business, not a global rule.
+  const maxDigits = Math.max(...country.phoneLengths);
+  const valid = country.phoneLengths.includes(phone.length);
+  const display = phone ? formatNationalNumber(phone, country) : examplePhone(country);
+
+  const matches = search.trim()
+    ? countries.filter((c) => {
+        const q = search.trim().toLowerCase();
+        return c.name.toLowerCase().includes(q) || c.dialCode.includes(q) || c.code.toLowerCase() === q;
+      })
+    : countries;
+
   return (
     <View style={{ flex: 1 }}>
       <View style={{ flex: 1, paddingHorizontal: 28, paddingTop: 24 }}>
@@ -452,28 +539,101 @@ function PhoneStage({
             borderColor: valid ? t.accent : 'transparent',
           }}
         >
-          <Txt style={{ fontSize: 22 }}>🇮🇳</Txt>
-          <Txt style={{ fontFamily: Font.semibold, fontSize: 19 }}>+91</Txt>
+          <Pressable
+            onPress={() => {
+              setSearch('');
+              setPicker(true);
+            }}
+            hitSlop={8}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}
+          >
+            <Txt style={{ fontSize: 22 }}>{country.flag}</Txt>
+            <Txt style={{ fontFamily: Font.semibold, fontSize: 19 }}>{country.dialCode}</Txt>
+            <Ionicons name="chevron-down" size={15} color={t.ink3} />
+          </Pressable>
           <View style={{ width: 1, height: 26, backgroundColor: t.line }} />
           <Txt
             color={phone ? t.ink : t.ink3}
             style={[{ fontFamily: Font.semibold, fontSize: 21, flex: 1, letterSpacing: 1 }, tabularNums]}
+            numberOfLines={1}
           >
             {display}
           </Txt>
         </View>
+        <Txt tone="ink3" variant="caption" style={{ marginTop: 8 }}>
+          Your money will be tracked in {country.currency} ({country.currencySymbol}).
+        </Txt>
         {error && (
           <Txt tone="danger" variant="caption" style={{ marginTop: 12 }}>
             {error}
           </Txt>
         )}
       </View>
-      <Keypad onKey={(d) => phone.length < 10 && setPhone(phone + d)} onDelete={() => setPhone(phone.slice(0, -1))} />
+      <Keypad
+        onKey={(d) => phone.length < maxDigits && setPhone(phone + d)}
+        onDelete={() => setPhone(phone.slice(0, -1))}
+      />
       <View style={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 8 }}>
         <Button size="lg" disabled={!valid} loading={loading} onPress={onSubmit}>
           Send code
         </Button>
       </View>
+
+      <Sheet open={picker} onClose={() => setPicker(false)} title="Choose your country" scrollable snapPoints={['70%']}>
+        <View style={{ paddingHorizontal: 20, paddingBottom: 20 }}>
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search country or code"
+            placeholderTextColor={t.ink3}
+            autoCorrect={false}
+            style={{
+              backgroundColor: t.fill,
+              borderRadius: 12,
+              paddingHorizontal: 14,
+              height: 44,
+              marginBottom: 10,
+              fontFamily: Font.medium,
+              fontSize: 15,
+              color: t.ink,
+            }}
+          />
+          {matches.map((c) => {
+            const on = c.code === country.code;
+            return (
+              <Pressable
+                key={c.code}
+                onPress={() => {
+                  onCountry(c);
+                  setPicker(false);
+                }}
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                  paddingVertical: 12,
+                  paddingHorizontal: 4,
+                  opacity: pressed ? 0.6 : 1,
+                })}
+              >
+                <Txt style={{ fontSize: 22 }}>{c.flag}</Txt>
+                <Txt style={{ flex: 1, fontFamily: on ? Font.semibold : Font.medium }} numberOfLines={1}>
+                  {c.name}
+                </Txt>
+                <Txt tone="ink3" variant="caption" style={tabularNums}>
+                  {c.dialCode}
+                </Txt>
+                {on && <Ionicons name="checkmark-circle" size={19} color={t.accent} />}
+              </Pressable>
+            );
+          })}
+          {matches.length === 0 && (
+            <Txt tone="ink3" variant="caption" center style={{ paddingVertical: 24, lineHeight: 19 }}>
+              No match. Spendes isn’t in every country yet — tell us where you are and we’ll add it.
+            </Txt>
+          )}
+        </View>
+      </Sheet>
     </View>
   );
 }
@@ -596,35 +756,42 @@ function OtpStage({
 function NameStage({
   firstName,
   lastName,
-  upiId,
+  country,
+  handleType,
+  handleValue,
   setFirstName,
   setLastName,
-  setUpiId,
+  setHandleType,
+  setHandleValue,
   error,
   loading,
   onSubmit,
 }: {
   firstName: string;
   lastName: string;
-  upiId: string;
+  country: CountryReference;
+  handleType: PaymentHandleType;
+  handleValue: string;
   setFirstName: (s: string) => void;
   setLastName: (s: string) => void;
-  setUpiId: (s: string) => void;
+  setHandleType: (t: PaymentHandleType) => void;
+  setHandleValue: (s: string) => void;
   error: string | null;
   loading: boolean;
   onSubmit: () => void;
 }) {
-  const upi = upiId.trim();
+  const t = useTheme();
+  const [railPicker, setRailPicker] = useState(false);
+  const rail = PAYMENT_RAILS[handleType];
+  const value = handleValue.trim();
+
   // Blank is fine (the field is optional); malformed is not, and catching it here
   // beats a server 400 at the very end of sign-up.
-  const upiBad = upi.length > 0 && !UPI_ID.test(upi);
-  const valid = firstName.trim().length > 0 && lastName.trim().length > 0 && !upiBad;
+  const handleBad = value.length > 0 && !rail.validate(value);
+  const valid = firstName.trim().length > 0 && lastName.trim().length > 0 && !handleBad;
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={{ flex: 1 }}
-    >
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView
         contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 28, paddingTop: 24 }}
         keyboardShouldPersistTaps="handled"
@@ -638,19 +805,46 @@ function NameStage({
         <View style={{ marginTop: 28, gap: 12 }}>
           <Field label="First name" value={firstName} onChange={setFirstName} autoFocus />
           <Field label="Last name" value={lastName} onChange={setLastName} />
+
+          <Pressable
+            onPress={() => setRailPicker(true)}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+              backgroundColor: t.fill,
+              borderRadius: 14,
+              paddingHorizontal: 16,
+              paddingVertical: 13,
+            }}
+          >
+            <Ionicons name={rail.icon} size={19} color={t.ink2} />
+            <View style={{ flex: 1 }}>
+              <Txt tone="ink3" variant="micro">
+                How friends pay you back (optional)
+              </Txt>
+              <Txt style={{ fontFamily: Font.semibold, fontSize: 15, marginTop: 1 }}>{rail.label}</Txt>
+            </View>
+            <Ionicons name="chevron-down" size={16} color={t.ink3} />
+          </Pressable>
+
           <Field
-            label="UPI ID (optional)"
-            value={upiId}
-            onChange={setUpiId}
-            placeholder="name@okhdfcbank"
+            label={rail.fieldLabel}
+            value={handleValue}
+            onChange={setHandleValue}
+            placeholder={rail.placeholder}
             autoCapitalize="none"
           />
         </View>
 
-        <Txt tone={upiBad ? 'danger' : 'ink3'} variant="caption" style={{ marginTop: 10, lineHeight: 18 }}>
-          {upiBad
-            ? 'That doesn’t look like a UPI ID — it should read like name@okhdfcbank.'
-            : 'Adding your UPI ID lets friends pay you back in one tap. You can add or change it later in your profile.'}
+        <Txt
+          tone={handleBad ? 'danger' : 'ink3'}
+          variant="caption"
+          style={{ marginTop: 10, lineHeight: 18 }}
+        >
+          {handleBad
+            ? `That doesn’t look like a ${rail.label} handle — try ${rail.placeholder}.`
+            : `${rail.hint} You can add or change this later in your profile.`}
         </Txt>
 
         {error && (
@@ -665,6 +859,49 @@ function NameStage({
         </Button>
         <View style={{ height: 16 }} />
       </ScrollView>
+
+      <Sheet open={railPicker} onClose={() => setRailPicker(false)} title="How should friends pay you?">
+        <View style={{ paddingHorizontal: 20, paddingBottom: 16, gap: 8 }}>
+          <Txt tone="ink2" variant="caption" style={{ lineHeight: 19, paddingBottom: 4 }}>
+            Most people in {country.name} use {PAYMENT_RAILS[country.defaultHandle].label}. Skip it
+            entirely if you’d rather just settle up in person.
+          </Txt>
+          {RAIL_ORDER.map((type) => {
+            const option = PAYMENT_RAILS[type];
+            const on = type === handleType;
+            return (
+              <Pressable
+                key={type}
+                onPress={() => {
+                  setHandleType(type);
+                  setHandleValue('');
+                  setRailPicker(false);
+                }}
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                  paddingVertical: 13,
+                  paddingHorizontal: 14,
+                  borderRadius: 14,
+                  backgroundColor: pressed ? t.fill : t.surface,
+                  borderWidth: 1,
+                  borderColor: on ? hexA(t.accent, 0.4) : t.line,
+                })}
+              >
+                <Ionicons name={option.icon} size={19} color={on ? t.accent : t.ink2} />
+                <View style={{ flex: 1 }}>
+                  <Txt style={{ fontFamily: Font.medium }}>{option.label}</Txt>
+                  <Txt tone="ink3" variant="micro" style={{ marginTop: 1 }}>
+                    {option.hint}
+                  </Txt>
+                </View>
+                {on && <Ionicons name="checkmark-circle" size={20} color={t.accent} />}
+              </Pressable>
+            );
+          })}
+        </View>
+      </Sheet>
     </KeyboardAvoidingView>
   );
 }

@@ -65,7 +65,7 @@ export default function Friends() {
           <EmptyState
             icon="person-add-outline"
             title="No friends yet"
-            subtitle="Add friends from your contacts to split 1-on-1 expenses and settle over UPI."
+            subtitle="Add friends from your contacts to split 1-on-1 expenses and settle up in a tap."
             actionLabel="Add from contacts"
             onAction={() => router.push('/friends/add')}
           />
@@ -114,7 +114,7 @@ export default function Friends() {
                       settled
                     </Txt>
                   ) : (
-                    <BalancePill net={f.net} />
+                    <BalancePill net={f.net} currency={f.currency} />
                   )}
                 </Pressable>
               );
@@ -125,7 +125,7 @@ export default function Friends() {
                       openRow={openRow}
                       onSettle={() =>
                         router.push(
-                          `/settle?kind=friend&id=${f.friendshipId}&toMemberId=${f.friendMemberId}&amount=${Math.abs(f.net)}&name=${encodeURIComponent(f.displayName)}`,
+                          `/settle?kind=friend&id=${f.friendshipId}&toMemberId=${f.friendMemberId}&amount=${Math.abs(f.net)}&name=${encodeURIComponent(f.displayName)}&currency=${f.currency}`,
                         )
                       }
                     >

@@ -9,6 +9,7 @@ import type {
   BudgetPeriod,
   Cashflow,
   Category,
+  CountryReference,
   DisputeReason,
   Emi,
   EmiSummary,
@@ -28,6 +29,7 @@ import type {
   OtpRequestResult,
   Paginated,
   PaidByInput,
+  PaymentHandle,
   PaymentMethod,
   PortfolioSummary,
   Settlement,
@@ -40,7 +42,7 @@ import type {
 
 // ── Auth ───────────────────────────────────────────────────────────────────
 export const authApi = {
-  requestOtp: (body: { dialCode?: string; phoneNumber: string }) =>
+  requestOtp: (body: { dialCode?: string; phoneNumber: string; country?: string }) =>
     post<OtpRequestResult>('/auth/otp/request', body),
   register: (body: {
     dialCode?: string;
@@ -49,11 +51,15 @@ export const authApi = {
     lastName: string;
     email?: string;
     defaultCurrency?: string;
+    /** ISO country from the sign-up picker — decides currency and settle-up rail. */
+    country?: string;
+    /** The device's IANA zone, so budgets use this user's own month. */
+    timezone?: string;
     /** Optional at sign-up — friends can settle up with them from day one. */
-    upiId?: string;
+    paymentHandle?: PaymentHandle;
     otp: string;
   }) => post<AuthResult>('/auth/register', body),
-  login: (body: { dialCode?: string; phoneNumber: string; otp: string }) =>
+  login: (body: { dialCode?: string; phoneNumber: string; country?: string; otp: string }) =>
     post<AuthResult>('/auth/login', body),
   refresh: (refreshToken: string) => post<Tokens>('/auth/refresh', { refreshToken }),
   logout: () => post<{ revoked: boolean }>('/auth/logout'),
@@ -62,7 +68,21 @@ export const authApi = {
 // ── Users ──────────────────────────────────────────────────────────────────
 export const usersApi = {
   me: () => get<User>('/users/me'),
-  updateMe: (body: Partial<Pick<User, 'firstName' | 'lastName' | 'email' | 'avatarUrl' | 'defaultCurrency' | 'upiId'>>) =>
+  updateMe: (
+    body: Partial<
+      Pick<
+        User,
+        | 'firstName'
+        | 'lastName'
+        | 'email'
+        | 'avatarUrl'
+        | 'defaultCurrency'
+        | 'country'
+        | 'timezone'
+        | 'paymentHandle'
+      >
+    >,
+  ) =>
     patch<User>('/users/me', body),
   /** Updates per-category push opt-outs (partial — send only changed keys). */
   updateNotificationPreferences: (body: Partial<NotificationPreferences>) =>
@@ -338,6 +358,11 @@ export const pushApi = {
   register: (body: { token: string; platform: 'ios' | 'android' }) =>
     post<{ registered: boolean }>('/push/register', body),
   unregister: (token: string) => post<{ removed: boolean }>('/push/unregister', { token }),
+};
+
+// ── Reference data (public — the sign-up screen needs it before any account) ──
+export const referenceApi = {
+  countries: () => get<{ countries: CountryReference[] }>('/reference/countries'),
 };
 
 // ── Notifications (activity inbox) ──────────────────────────────────────────

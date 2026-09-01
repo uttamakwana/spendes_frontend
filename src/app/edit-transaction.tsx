@@ -8,6 +8,7 @@ import { AmountField, CategoryField, ChipSelect, DateField, LabeledInput } from 
 import { useExpense, useIncome, useUpdateExpense, useUpdateIncome } from '@/features/hooks';
 import { Button, Screen, Skeleton, Txt, TopBar } from '@/ui';
 
+/** UPI stays listed here so an existing UPI transaction still shows its own method. */
 const METHODS: { value: PaymentMethod; label: string }[] = [
   { value: 'upi', label: 'UPI' },
   { value: 'card', label: 'Card' },

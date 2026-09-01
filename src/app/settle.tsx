@@ -12,7 +12,7 @@ import {
   useRecordFriendSettlement,
   useRecordGroupSettlement,
 } from '@/features/hooks';
-import { money } from '@/lib/money';
+import { currencySymbol, money, moneyAmount } from '@/lib/money';
 import { useTheme } from '@/theme';
 import { Font, tabularNums } from '@/theme/fonts';
 import { Avatar, Button, IconButton, MoneyText, Txt } from '@/ui';
@@ -28,6 +28,10 @@ export default function Settle() {
     amount?: string;
     name?: string;
     incoming?: string;
+    /** The balance's own currency — a group settles in its currency, not the viewer's. */
+    currency?: string;
+    /** The payee's rail ("UPI", "Venmo"), when the caller already knows it. */
+    rail?: string;
     /** Set when we arrived from a split request — paying it is also confirming it. */
     notificationId?: string;
   }>();
@@ -36,13 +40,20 @@ export default function Settle() {
   const id = params.id ?? '';
   const toMemberId = params.toMemberId ?? '';
   const fromMemberId = params.fromMemberId;
-  const amount = parseInt(params.amount ?? '0', 10) || 0;
+  // Cents/paise matter outside round-rupee India, so this is a float, not an int.
+  const amount = Number.parseFloat(params.amount ?? '0') || 0;
   const name = params.name ?? 'them';
   const incoming = params.incoming === '1';
+  const currency = params.currency;
+  const rail = params.rail;
 
   const [stage, setStage] = useState<'form' | 'confirm' | 'done'>('form');
   const [error, setError] = useState<string | null>(null);
-  const [manual, setManual] = useState<{ vpa: string; name: string } | null>(null);
+  // Shown when the rail has no link, or the link couldn't be opened: the handle
+  // to pay by hand.
+  const [manual, setManual] = useState<{ handle: string; name: string; rail: string } | null>(
+    null,
+  );
   // The UPI intent's transaction reference — passed back when recording so the
   // payment is correlated and can't be double-recorded.
   const [reference, setReference] = useState<string | undefined>();
@@ -74,24 +85,34 @@ export default function Settle() {
     return () => sub.remove();
   }, []);
 
-  const payViaUpi = async () => {
+  const payNow = async () => {
     setError(null);
     setManual(null);
     try {
       const res = await intent.mutateAsync();
       setReference(res.reference);
-      // Open the UPI app directly. We deliberately don't gate on Linking.canOpenURL:
-      // for an undeclared scheme it returns false on real iOS devices even when a
-      // UPI app is installed, which is exactly the "nothing opens" bug. openURL is
-      // not subject to that, and rejects only when no app can actually handle it.
+
+      // Rails we can't link into (a bank reference, say) come back without a uri —
+      // there was never an app to open, so go straight to showing the handle.
+      if (!res.uri) {
+        setManual({ handle: res.payeeHandle, name: res.payeeName, rail: res.railLabel });
+        return;
+      }
+
+      // Open the payment app directly. We deliberately don't gate on
+      // Linking.canOpenURL: for an undeclared scheme it returns false on real iOS
+      // devices even when the app is installed, which is exactly the "nothing
+      // opens" bug. openURL is not subject to that, and rejects only when no app
+      // can actually handle it.
       try {
         await Linking.openURL(res.uri);
         awaitingReturn.current = true;
       } catch {
-        setManual({ vpa: res.payeeVpa, name: res.payeeName });
+        setManual({ handle: res.payeeHandle, name: res.payeeName, rail: res.railLabel });
       }
     } catch (e) {
-      // Intent build failed on the server (e.g. payee hasn't added a UPI id).
+      // The server refused to build one — no handle on file, or a rail that can't
+      // carry this currency. Either way the copy explains it and mark-as-paid works.
       setError(errorMessage(e));
     }
   };
@@ -100,7 +121,7 @@ export default function Settle() {
     setError(null);
     awaitingReturn.current = false;
     record.mutate(
-      { toMemberId, fromMemberId, amount, method: 'upi', reference },
+      { toMemberId, fromMemberId, amount, method: 'other', reference },
       {
         onSuccess: () => {
           // Settling a request answers it: nobody should be asked "is this right?"
@@ -124,7 +145,13 @@ export default function Settle() {
         <Txt variant="title2" style={{ marginTop: 24 }}>
           {incoming ? 'Marked as received' : 'Payment recorded'}
         </Txt>
-        <MoneyText value={incoming ? amount : -amount} sign size={18} style={{ marginTop: 6 }} />
+        <MoneyText
+          value={incoming ? amount : -amount}
+          sign
+          size={18}
+          currency={currency}
+          style={{ marginTop: 6 }}
+        />
         <Txt tone="ink2" center style={{ marginTop: 8 }}>
           You and {name.split(' ')[0]} are now{' '}
           <Txt color={t.success} style={{ fontFamily: Font.semibold }}>
@@ -160,7 +187,7 @@ export default function Settle() {
           <Txt tone="ink2" center style={{ marginTop: 8, lineHeight: 21 }}>
             Confirm you paid{' '}
             <Txt color={t.ink} style={{ fontFamily: Font.semibold }}>
-              {money(amount)}
+              {money(amount, { currency })}
             </Txt>{' '}
             to{' '}
             <Txt color={t.ink} style={{ fontFamily: Font.semibold }}>
@@ -229,9 +256,11 @@ export default function Settle() {
 
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: 18 }}>
           <Txt color={t.ink3} style={{ fontSize: 28, marginTop: 6 }}>
-            ₹
+            {currencySymbol(currency)}
           </Txt>
-          <Txt style={[{ fontFamily: Font.bold, fontSize: 52 }, tabularNums]}>{money(amount).replace('₹', '')}</Txt>
+          <Txt style={[{ fontFamily: Font.bold, fontSize: 52 }, tabularNums]}>
+            {moneyAmount(amount, { currency })}
+          </Txt>
         </View>
 
         {error && (
@@ -258,11 +287,13 @@ export default function Settle() {
               <Txt style={{ fontFamily: Font.semibold }}>Pay manually</Txt>
             </View>
             <Txt tone="ink2" variant="caption" style={{ lineHeight: 19 }}>
-              No UPI app opened automatically. Open any UPI app (GPay, PhonePe, Paytm) and send{' '}
+              {manual.rail === 'UPI'
+                ? 'No UPI app opened automatically. Open any UPI app (GPay, PhonePe, Paytm) and send '
+                : `We couldn’t open ${manual.rail} from here. Send `}
               <Txt color={t.ink} style={{ fontFamily: Font.semibold }}>
-                {money(amount)}
+                {money(amount, { currency })}
               </Txt>{' '}
-              to this UPI ID:
+              to:
             </Txt>
             <View
               style={{
@@ -276,7 +307,7 @@ export default function Settle() {
               }}
             >
               <Text selectable style={{ fontFamily: Font.semibold, fontSize: 15, color: t.ink }}>
-                {manual.vpa}
+                {manual.handle}
               </Text>
               <Txt tone="ink3" variant="micro">
                 long-press to copy
@@ -291,8 +322,8 @@ export default function Settle() {
 
       <View style={{ paddingHorizontal: 24, paddingBottom: 24, gap: 10 }}>
         {!incoming && (
-          <Button size="lg" icon="phone-portrait" loading={intent.isPending} onPress={payViaUpi}>
-            Pay {money(amount)} via UPI
+          <Button size="lg" icon="phone-portrait" loading={intent.isPending} onPress={payNow}>
+            {rail ? `Pay ${money(amount, { currency })} via ${rail}` : `Pay ${money(amount, { currency })}`}
           </Button>
         )}
         <Button size="lg" variant={incoming ? 'primary' : 'soft'} icon="checkmark" loading={record.isPending} onPress={markPaid}>

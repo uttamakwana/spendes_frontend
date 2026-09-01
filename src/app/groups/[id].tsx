@@ -41,12 +41,14 @@ export default function GroupDetail() {
   const myNet = balances.data?.myNet ?? 0;
   const myMemberId = balances.data?.myMemberId;
   const total = (expenses.data?.items ?? []).reduce((s, e) => s + e.amount, 0);
+  // A group keeps its books in its own currency, whatever the viewer's happens to be.
+  const currency = g?.currency ?? balances.data?.currency;
 
   const onSettle = () => {
     const transfer = balances.data?.suggestedTransfers.find((tr) => tr.fromMemberId === myMemberId);
     if (transfer) {
       router.push(
-        `/settle?kind=group&id=${id}&toMemberId=${transfer.toMemberId}&amount=${transfer.amount}&name=${encodeURIComponent(transfer.toName)}`,
+        `/settle?kind=group&id=${id}&toMemberId=${transfer.toMemberId}&amount=${transfer.amount}&name=${encodeURIComponent(transfer.toName)}&currency=${currency}`,
       );
     }
   };
@@ -68,7 +70,10 @@ export default function GroupDetail() {
               {g?.name ?? 'Group'}
             </Txt>
             <Txt tone="ink2" variant="caption" style={{ marginTop: 1 }}>
-              Total spent <Txt color={t.ink} style={{ fontFamily: Font.semibold }}>{money(total)}</Txt>
+              Total spent{' '}
+              <Txt color={t.ink} style={{ fontFamily: Font.semibold }}>
+                {money(total, { currency })}
+              </Txt>
             </Txt>
           </View>
         </View>
@@ -138,7 +143,7 @@ export default function GroupDetail() {
               memberCount={balances.data!.balances.length}
               onPay={(tr) =>
                 router.push(
-                  `/settle?kind=group&id=${id}&toMemberId=${tr.toMemberId}&amount=${tr.amount}&name=${encodeURIComponent(tr.toName)}`,
+                  `/settle?kind=group&id=${id}&toMemberId=${tr.toMemberId}&amount=${tr.amount}&name=${encodeURIComponent(tr.toName)}&currency=${currency}`,
                 )
               }
             />
@@ -191,7 +196,8 @@ function GroupExpenseRow({ e, myMemberId }: { e: GroupExpense; myMemberId?: stri
           {e.description}
         </Txt>
         <Txt tone="ink3" variant="caption" style={{ marginTop: 1 }}>
-          {iPaid ? 'You' : payerName.split(' ')[0]} paid {money(e.amount)} · {format(new Date(e.spentAt), 'MMM d')}
+          {iPaid ? 'You' : payerName.split(' ')[0]} paid {money(e.amount, { currency: e.currency })} ·{' '}
+          {format(new Date(e.spentAt), 'MMM d')}
         </Txt>
       </View>
       <View style={{ alignItems: 'flex-end' }}>
@@ -199,7 +205,7 @@ function GroupExpenseRow({ e, myMemberId }: { e: GroupExpense; myMemberId?: stri
           {lent >= 0 ? 'you lent' : 'you borrowed'}
         </Txt>
         <Txt color={lent >= 0 ? t.success : t.danger} style={{ fontFamily: Font.semibold, fontSize: 14.5 }}>
-          {money(Math.abs(lent))}
+          {money(Math.abs(lent), { currency: e.currency })}
         </Txt>
       </View>
     </Card>
@@ -246,7 +252,7 @@ function BalancesView({
               <MoneyText value={tr.amount} size={17} weight="bold" />
               {involvesMe ? (
                 <Button full={false} size="sm" variant={iPay ? 'primary' : 'soft'} icon={iPay ? 'phone-portrait' : 'notifications'} onPress={() => iPay && onPay(tr)}>
-                  {iPay ? 'Pay via UPI' : 'Remind'}
+                  {iPay ? 'Settle up' : 'Remind'}
                 </Button>
               ) : (
                 <Txt tone="ink3" variant="caption">

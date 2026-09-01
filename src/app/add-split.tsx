@@ -16,7 +16,7 @@ import {
   useGroups,
 } from '@/features/hooks';
 import { categoryStyle } from '@/lib/categories';
-import { money } from '@/lib/money';
+import { money, currencySymbol } from '@/lib/money';
 import { hexA, useTheme } from '@/theme';
 import { Font, tabularNums } from '@/theme/fonts';
 import {
@@ -412,7 +412,7 @@ function SplitEditor({
                 </Txt>
 
                 {strategy === 'exact' && (
-                  <InputBox prefix="₹" value={exact[m.id] ?? ''} onChange={(v) => setExact((s) => ({ ...s, [m.id]: v }))} width={70} />
+                  <InputBox prefix={currencySymbol()} value={exact[m.id] ?? ''} onChange={(v) => setExact((s) => ({ ...s, [m.id]: v }))} width={70} />
                 )}
                 {strategy === 'percentage' && (
                   <InputBox suffix="%" value={pct[m.id] ?? ''} onChange={(v) => setPct((s) => ({ ...s, [m.id]: v }))} width={50} />

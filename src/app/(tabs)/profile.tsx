@@ -5,6 +5,7 @@ import { Alert, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/auth/AuthProvider';
+import { PAYMENT_RAILS } from '@/lib/payment-rails';
 import { ACCENT_LABELS, hexA, useTheme, useThemeControls } from '@/theme';
 import { Font } from '@/theme/fonts';
 import { Avatar, CollapsibleScreen, IconButton, Txt } from '@/ui';
@@ -35,9 +36,9 @@ export default function ProfileTab() {
             <Txt tone="ink2" variant="caption" style={{ marginTop: 1 }}>
               {user?.dialCode} {user?.phoneNumber}
             </Txt>
-            {user?.upiId ? (
+            {user?.paymentHandle?.value ? (
               <Txt tone="accent" variant="caption" style={{ fontFamily: Font.semibold, marginTop: 2 }}>
-                {user.upiId}
+                {user.paymentHandle.value}
               </Txt>
             ) : null}
           </View>
@@ -94,10 +95,14 @@ export default function ProfileTab() {
           <Row icon="receipt-outline" color="#52525B" label="Transactions" onPress={() => router.push('/transactions')} />
           <Row icon="people-outline" color="#4F46E5" label="Friends" onPress={() => router.push('/friends')} />
           <Row
-            icon="phone-portrait-outline"
+            icon="wallet-outline"
             color="#6BA4B8"
-            label="UPI ID"
-            detail={user?.upiId ?? 'Set up'}
+            label="How you get paid"
+            detail={
+              user?.paymentHandle
+                ? PAYMENT_RAILS[user.paymentHandle.type].label
+                : 'Set up'
+            }
             onPress={() => router.push('/profile/edit')}
             last
           />
@@ -126,7 +131,7 @@ export default function ProfileTab() {
         </Group>
 
         <Txt center tone="ink3" variant="caption" style={{ marginTop: 4 }}>
-          Spendes v1.0 · Made in India 🇮🇳
+          Spendes v1.0
         </Txt>
     </CollapsibleScreen>
   );

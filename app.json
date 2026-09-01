@@ -14,6 +14,7 @@
         "NSContactsUsageDescription": "Spendes uses your contacts so you can add friends and group members to split expenses with.",
         "LSApplicationQueriesSchemes": [
           "upi",
+          "venmo",
           "tez",
           "gpay",
           "phonepe",

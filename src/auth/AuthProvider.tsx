@@ -11,6 +11,7 @@ import {
   usersApi,
 } from '@/api';
 import { queryClient } from '@/data/queryClient';
+import { setActiveCurrency } from '@/lib/money';
 import { unregisterPushToken } from '@/features/push';
 
 type Status = 'loading' | 'authed' | 'guest';
@@ -30,6 +31,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<Status>('loading');
   const [user, setUserState] = useState<User | null>(null);
 
+  // Every amount in the app renders in the signed-in user's currency. It changes
+  // only at sign-in (one currency per account, never converted), so it is set here
+  // rather than threaded through every screen that shows a number.
+  const applyUser = useCallback((next: User | null) => {
+    setActiveCurrency(next?.defaultCurrency);
+    setUserState(next);
+  }, []);
+
   const signOut = useCallback(async () => {
     // Detach this device's push token while the request can still authenticate.
     await unregisterPushToken();
@@ -40,15 +49,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     await clearTokens();
     queryClient.clear();
-    setUserState(null);
+    applyUser(null);
     setStatus('guest');
-  }, []);
+  }, [applyUser]);
 
   const signIn = useCallback(async (result: AuthResult) => {
     await saveTokens(result.tokens);
-    setUserState(result.user);
+    applyUser(result.user);
     setStatus('authed');
-  }, []);
+  }, [applyUser]);
 
   // Permanently delete the account, then tear down the local session. The server
   // cascades the account and its push tokens, so (unlike sign-out) there's nothing
@@ -58,23 +67,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await usersApi.deleteAccount();
     await clearTokens();
     queryClient.clear();
-    setUserState(null);
+    applyUser(null);
     setStatus('guest');
-  }, []);
+  }, [applyUser]);
 
-  const setUser = useCallback((u: User) => setUserState(u), []);
+  const setUser = useCallback((u: User) => applyUser(u), [applyUser]);
 
   // Wire refresh-failure → sign out (route guard reacts to status).
   useEffect(() => {
     setAuthFailureHandler(() => {
       clearTokens().finally(() => {
         queryClient.clear();
-        setUserState(null);
+        applyUser(null);
         setStatus('guest');
       });
     });
     return () => setAuthFailureHandler(null);
-  }, []);
+  }, [applyUser]);
 
   // Restore session on cold start.
   useEffect(() => {
@@ -88,7 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const me = await usersApi.me();
         if (!active) return;
-        setUserState(me);
+        applyUser(me);
         setStatus('authed');
       } catch {
         if (!active) return;
@@ -99,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [applyUser]);
 
   const value = useMemo<AuthContextValue>(
     () => ({ status, user, signIn, signOut, deleteAccount, setUser }),
